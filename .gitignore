@@ -1,0 +1,40 @@
+cat > .gitignore << 'EOF'
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+env/
+venv/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# IDE / editor settings
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python cache
+__pycache__/
+
+# Project data files
+data/*.json
+
+# Poetry lock file (if generated automatically)
+poetry.lock
+
+# Ignore temporary or test files
+*.tmp
+*.bak
+EOF
