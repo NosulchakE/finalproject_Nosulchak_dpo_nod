@@ -1,47 +1,43 @@
-import json
-from pathlib import Path
-from typing import Any
+# valutatrade_hub/infra/settings.py
+import os
+from datetime import timedelta
 
 class SettingsLoader:
-    """
-    Singleton для конфигурации проекта.
-
-    Реализован через __new__ для простоты и читаемости:
-    - гарантирует единственный экземпляр в приложении,
-    - легко использовать в любом месте через import,
-    - при повторном импорте не создаются новые объекты.
-    """
-
     _instance = None
 
-    def __new__(cls, config_path: str = "config.json"):
+    def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            cls._instance._config_path = Path(config_path)
-            cls._instance._load_settings()
+
+            # Основные параметры
+            cls._instance.DATA_DIR = "data"
+            cls._instance.USERS_FILE = os.path.join(cls._instance.DATA_DIR, "users.json")
+            cls._instance.PORTFOLIOS_FILE = os.path.join(cls._instance.DATA_DIR, "portfolios.json")
+            cls._instance.RATES_FILE = os.path.join(cls._instance.DATA_DIR, "rates.json")
+
+            # ExchangeRate-API ключ
+            cls._instance.EXCHANGERATE_API_KEY = os.getenv(
+                "EXCHANGERATE_API_KEY",
+                "1a4a95b327278c18d57643bb"  # по умолчанию твой ключ
+            )
+
+            # Таймаут сетевых запросов
+            cls._instance.REQUEST_TIMEOUT = 10  # секунд
+
+            # TTL кэша для rates.json (например, 5 минут)
+            cls._instance.RATES_TTL_SECONDS = 300
+
+            # Базовая валюта
+            cls._instance.BASE_CURRENCY = "USD"
+
         return cls._instance
 
-    def _load_settings(self):
-        """Загрузка конфигурации из JSON, дефолтные значения при отсутствии файла"""
-        if self._config_path.exists():
-            with open(self._config_path, "r", encoding="utf-8") as f:
-                self._config = json.load(f)
-        else:
-            # Дефолтные значения
-            self._config = {
-                "DATA_PATH": "data/",
-                "USERS_JSON": "data/users.json",
-                "PORTFOLIOS_JSON": "data/portfolios.json",
-                "RATES_JSON": "data/rates.json",
-                "BASE_CURRENCY": "USD",
-                "RATES_TTL_SECONDS": 300,
-                "LOG_PATH": "logs/valutatrade.log",
-            }
-
-    def get(self, key: str, default: Any = None) -> Any:
-        """Получение значения по ключу"""
-        return self._config.get(key, default)
+    def get(self, key, default=None):
+        return getattr(self, key, default)
 
     def reload(self):
-        """Перезагрузка конфигурации из файла"""
-        self._load_settings()
+        # В реальности можно перечитать переменные окружения или config-файл
+        self.__class__._instance = None
+        return SettingsLoader()
+
+
