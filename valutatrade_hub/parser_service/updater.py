@@ -1,14 +1,12 @@
-# valutatrade_hub/parser_service/updater.py
-import logging
+from .config import ParserConfig
 from .api_clients import ExchangeRateApiClient
 from .storage import RatesStorage
-from .config import ParserConfig
+import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("parser_service")
+logging.basicConfig(level=logging.INFO)
 
 class RatesUpdater:
-    """Основной класс обновления курсов"""
-
     def __init__(self):
         self.config = ParserConfig()
         self.client = ExchangeRateApiClient(self.config)
@@ -20,8 +18,8 @@ class RatesUpdater:
             rates = self.client.fetch_rates()
             logger.info(f"Fetched {len(rates)} rates from ExchangeRate-API")
             self.storage.save_rates(rates)
-            self.storage.append_history(rates)
-            logger.info("Update successful.")
+            logger.info("Rates saved successfully")
         except Exception as e:
             logger.error(f"Update failed: {e}")
-            raise
+
+
