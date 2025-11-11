@@ -1,21 +1,18 @@
 # main.py
-import sys
-import logging
-from valutatrade_hub.cli.interface import main as cli_main
-from valutatrade_hub.logging_config import setup_logging
+"""
+Главная точка входа проекта ValutaTrade.
+Запускает CLI-интерфейс (valutatrade_hub/cli/interface.py)
+"""
+
+from valutatrade_hub.cli.interface import run_cli
 
 
 def main():
-    """Точка входа в приложение ValutaTradeHub."""
-    setup_logging()
-
-    try:
-        cli_main()
-    except Exception as e:
-        logging.exception("Unhandled exception in CLI")
-        print(f"Произошла ошибка: {e}")
-        sys.exit(1)
+    """Точка входа для poetry script (см. [tool.poetry.scripts])"""
+    run_cli()
 
 
 if __name__ == "__main__":
     main()
+
+
