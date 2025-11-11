@@ -1,43 +1,134 @@
 # valutatrade_hub/cli/interface.py
 import argparse
-from valutatrade_hub.core.usecases import update_rates, get_rate
-from valutatrade_hub.core.exceptions import ApiRequestError, CurrencyNotFoundError
+import sys
+from datetime import datetime
+
+from valutatrade_hub.core.usecases import (
+    register_user,
+    login_user,
+    show_portfolio,
+    buy_currency,
+    sell_currency,
+    get_rate,
+    update_rates
+)
+from valutatrade_hub.core.exceptions import InsufficientFundsError, CurrencyNotFoundError, ApiRequestError
+
+# Простая глобальная переменная для текущей сессии
+CURRENT_USER = None
+
+def cmd_register(args):
+    try:
+        user = register_user(args.username, args.password)
+        print(f"Пользователь '{user.username}' зарегистрирован (id={user.user_id}). Войдите: login --username {user.username} --password ****")
+    except ValueError as e:
+        print(f"Ошибка: {e}")
+
+def cmd_login(args):
+    global CURRENT_USER
+    try:
+        user = login_user(args.username, args.password)
+        CURRENT_USER = user
+        print(f"Вы вошли как '{user.username}'")
+    except ValueError as e:
+        print(f"Ошибка: {e}")
+
+def cmd_show_portfolio(args):
+    if not CURRENT_USER:
+        print("Сначала выполните login")
+        return
+    try:
+        show_portfolio(CURRENT_USER.user_id, base_currency=args.base)
+    except CurrencyNotFoundError as e:
+        print(e)
+
+def cmd_buy(args):
+    if not CURRENT_USER:
+        print("Сначала выполните login")
+        return
+    try:
+        buy_currency(CURRENT_USER.user_id, args.currency, args.amount)
+    except (ValueError, CurrencyNotFoundError, ApiRequestError) as e:
+        print(f"Ошибка: {e}")
+
+def cmd_sell(args):
+    if not CURRENT_USER:
+        print("Сначала выполните login")
+        return
+    try:
+        sell_currency(CURRENT_USER.user_id, args.currency, args.amount)
+    except (InsufficientFundsError, ValueError, CurrencyNotFoundError, ApiRequestError) as e:
+        print(f"Ошибка: {e}")
+
+def cmd_get_rate(args):
+    try:
+        rate, updated_at = get_rate(args.from_currency, args.to_currency)
+        print(f"Курс {args.from_currency}→{args.to_currency}: {rate} (обновлено: {updated_at})")
+    except CurrencyNotFoundError as e:
+        print(f"Ошибка: {e}")
+    except ApiRequestError as e:
+        print(f"Ошибка API: {e}")
+
+def cmd_update_rates(args):
+    try:
+        total = update_rates(source=args.source)
+        print(f"Update successful. Total rates updated: {total}")
+    except ApiRequestError as e:
+        print(f"Update completed с ошибками: {e}")
 
 def main():
     parser = argparse.ArgumentParser(description="ValutaTrade CLI")
-    subparsers = parser.add_subparsers(dest="command")
+    subparsers = parser.add_subparsers(title="Commands")
 
-    # Команда update-rates
-    parser_update = subparsers.add_parser("update-rates", help="Обновить курсы валют")
-    
-    # Команда get-rate
-    parser_get = subparsers.add_parser("get-rate", help="Показать курс валюты")
-    parser_get.add_argument("--from", dest="from_currency", required=True, help="Исходная валюта")
-    parser_get.add_argument("--to", dest="to_currency", required=True, help="Целевая валюта")
+    # register
+    parser_register = subparsers.add_parser("register")
+    parser_register.add_argument("--username", required=True)
+    parser_register.add_argument("--password", required=True)
+    parser_register.set_defaults(func=cmd_register)
+
+    # login
+    parser_login = subparsers.add_parser("login")
+    parser_login.add_argument("--username", required=True)
+    parser_login.add_argument("--password", required=True)
+    parser_login.set_defaults(func=cmd_login)
+
+    # show-portfolio
+    parser_show = subparsers.add_parser("show-portfolio")
+    parser_show.add_argument("--base", default="USD")
+    parser_show.set_defaults(func=cmd_show_portfolio)
+
+    # buy
+    parser_buy = subparsers.add_parser("buy")
+    parser_buy.add_argument("--currency", required=True)
+    parser_buy.add_argument("--amount", type=float, required=True)
+    parser_buy.set_defaults(func=cmd_buy)
+
+    # sell
+    parser_sell = subparsers.add_parser("sell")
+    parser_sell.add_argument("--currency", required=True)
+    parser_sell.add_argument("--amount", type=float, required=True)
+    parser_sell.set_defaults(func=cmd_sell)
+
+    # get-rate
+    parser_rate = subparsers.add_parser("get-rate")
+    parser_rate.add_argument("--from_currency", required=True)
+    parser_rate.add_argument("--to_currency", required=True)
+    parser_rate.set_defaults(func=cmd_get_rate)
+
+    # update-rates
+    parser_update = subparsers.add_parser("update-rates")
+    parser_update.add_argument("--source", default=None)
+    parser_update.set_defaults(func=cmd_update_rates)
 
     args = parser.parse_args()
-
-    if args.command == "update-rates":
-        try:
-            count = update_rates()
-            print(f"Update successful. Total rates updated: {count}")
-        except ApiRequestError as e:
-            print(f"ERROR: {e}")
-
-    elif args.command == "get-rate":
-        try:
-            rate, updated_at = get_rate(args.from_currency, args.to_currency)
-            print(f"Rate {args.from_currency.upper()}→{args.to_currency.upper()}: {rate} (updated: {updated_at})")
-        except CurrencyNotFoundError as e:
-            print(f"ERROR: {e}")
-        except ApiRequestError as e:
-            print(f"ERROR: {e}")
-
+    if hasattr(args, "func"):
+        args.func(args)
     else:
         parser.print_help()
 
 if __name__ == "__main__":
     main()
+
 
 
 
