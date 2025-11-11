@@ -71,10 +71,14 @@ def cmd_get_rate(args):
 
 def cmd_update_rates(args):
     try:
-        total = update_rates(source=args.source)
-        print(f"Update successful. Total rates updated: {total}")
+        updater = RatesUpdater(source=args.source)
+        total = updater.run_update()
+        if total > 0:
+            print(f"Update successful. Total rates updated: {total}")
+        else:
+            print("Update completed, но данных не обновлено")
     except ApiRequestError as e:
-        print(f"Update completed с ошибками: {e}")
+        print(f"Ошибка API: {e}")
 
 def main():
     parser = argparse.ArgumentParser(description="ValutaTrade CLI")
@@ -128,6 +132,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
