@@ -1,115 +1,74 @@
 # valutatrade_hub/cli/interface.py
 import argparse
-from decimal import Decimal
+import json
+from datetime import datetime
+from valutatrade_hub.parser_service.updater import RatesUpdater
+from valutatrade_hub.parser_service.config import ParserConfig
 
-from valutatrade_hub.core import usecases
-from valutatrade_hub.core.exceptions import (
-    InsufficientFundsError,
-    CurrencyNotFoundError,
-    ApiRequestError
-)
+def update_rates_command(args):
+    updater = RatesUpdater()
+    try:
+        updater.run_update()
+        print(f"Update successful. Rates written to {ParserConfig().RATES_FILE_PATH}")
+    except Exception as e:
+        print(f"Update failed: {e}")
 
+def show_rates_command(args):
+    config = ParserConfig()
+    try:
+        with open(config.RATES_FILE_PATH, "r") as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        print("Локальный кеш курсов пуст. Выполните 'update-rates'.")
+        return
+
+    pairs = data.get("pairs", {})
+    last_refresh = data.get("last_refresh", "N/A")
+
+    # фильтры
+    if args.currency:
+        pairs = {k: v for k, v in pairs.items() if args.currency.upper() in k}
+
+    if args.base:
+        # оставить только пары с указанной базой
+        pairs = {k: v for k, v in pairs.items() if k.endswith(f"_{args.base.upper()}")}
+
+    if args.top:
+        # отсортировать по значению курса и взять top N
+        pairs = dict(sorted(pairs.items(), key=lambda item: item[1]["rate"], reverse=True)[:args.top])
+
+    if not pairs:
+        print("Нет данных по указанным фильтрам.")
+        return
+
+    print(f"Rates from cache (updated at {last_refresh}):")
+    for k, v in pairs.items():
+        print(f"- {k}: {v['rate']} (source: {v['source']})")
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="ValutaTrade CLI — управление кошельками и валютой"
-    )
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    parser = argparse.ArgumentParser(description="ValutaTrade CLI")
+    subparsers = parser.add_subparsers(dest="command")
 
-    # ---------------- Register ----------------
-    parser_register = subparsers.add_parser("register")
-    parser_register.add_argument("--username", required=True)
-    parser_register.add_argument("--password", required=True)
+    # update-rates
+    parser_update = subparsers.add_parser("update-rates", help="Обновить курсы валют")
+    parser_update.set_defaults(func=update_rates_command)
 
-    # ---------------- Login ----------------
-    parser_login = subparsers.add_parser("login")
-    parser_login.add_argument("--username", required=True)
-    parser_login.add_argument("--password", required=True)
+    # show-rates
+    parser_show = subparsers.add_parser("show-rates", help="Показать локальные курсы")
+    parser_show.add_argument("--currency", type=str, help="Фильтр по валюте (например, BTC)")
+    parser_show.add_argument("--top", type=int, help="Показать N самых дорогих валют")
+    parser_show.add_argument("--base", type=str, help="Базовая валюта для отображения")
+    parser_show.set_defaults(func=show_rates_command)
 
-    # ---------------- Show Portfolio ----------------
-    parser_show = subparsers.add_parser("show-portfolio")
-    parser_show.add_argument("--base", default="USD")
-
-    # ---------------- Buy ----------------
-    parser_buy = subparsers.add_parser("buy")
-    parser_buy.add_argument("--currency", required=True)
-    parser_buy.add_argument("--amount", type=float, required=True)
-
-    # ---------------- Sell ----------------
-    parser_sell = subparsers.add_parser("sell")
-    parser_sell.add_argument("--currency", required=True)
-    parser_sell.add_argument("--amount", type=float, required=True)
-
-    # ---------------- Get Rate ----------------
-    parser_rate = subparsers.add_parser("get-rate")
-    parser_rate.add_argument("--from", dest="from_code", required=True)
-    parser_rate.add_argument("--to", dest="to_code", required=True)
-
-    # ---------------- Parse args ----------------
     args = parser.parse_args()
-
-    try:
-        if args.command == "register":
-            user = usecases.register(args.username, args.password)
-            print(f"Пользователь '{user.username}' зарегистрирован (id={user.user_id}). Войдите: login --username {user.username} --password ****")
-
-        elif args.command == "login":
-            user = usecases.login(args.username, args.password)
-            print(f"Вы вошли как '{user.username}'")
-
-        elif args.command == "show-portfolio":
-            user = usecases.get_current_user()
-            portfolio = usecases._load_portfolio(user.user_id)
-            base = args.base.upper()
-            total = 0.0
-
-            print(f"Портфель пользователя '{user.username}' (база: {base}):")
-            if not portfolio.wallets:
-                print("  Кошельков пока нет")
-            else:
-                for code, wallet in portfolio.wallets.items():
-                    try:
-                        rate = usecases._get_rate(code, base)
-                        value = wallet.balance * rate
-                    except ApiRequestError:
-                        rate = None
-                        value = None
-
-                    balance_str = f"{wallet.balance:.4f}"
-                    if value is not None:
-                        print(f"- {code}: {balance_str} → {value:.2f} {base}")
-                        total += value
-                    else:
-                        print(f"- {code}: {balance_str} → (курс недоступен)")
-
-                print("-" * 40)
-                print(f"ИТОГО: {total:.2f} {base}")
-
-        elif args.command == "buy":
-            res = usecases.buy(args.currency.upper(), args.amount)
-            print(f"Покупка выполнена: {res['amount']:.4f} {res['currency']} по курсу {res['rate']:.2f} {res['base']}")
-            print(f"Изменения в портфеле: {res['currency']}: стало {res['wallet_balance']:.4f}")
-
-        elif args.command == "sell":
-            res = usecases.sell(args.currency.upper(), args.amount)
-            print(f"Продажа выполнена: {res['amount']:.4f} {res['currency']} по курсу {res['rate']:.2f} {res['base']}")
-            print(f"Изменения в портфеле: {res['currency']}: стало {res['wallet_balance']:.4f}")
-
-        elif args.command == "get-rate":
-            rate_info = usecases.get_rate(args.from_code.upper(), args.to_code.upper())
-            print(f"Курс {rate_info['from']}→{rate_info['to']}: {rate_info['rate']} (обновлено: {rate_info['updated_at']})")
-
-    except InsufficientFundsError as e:
-        print(f"Недостаточно средств: доступно {e.available} {e.code}, требуется {e.required} {e.code}")
-    except CurrencyNotFoundError as e:
-        print(f"Неизвестная валюта '{e.code}'. Список поддерживаемых кодов: ...")
-    except ApiRequestError as e:
-        print(f"Ошибка получения курса: {e}")
-    except Exception as e:
-        print(f"Ошибка: {e}")
-
+    if hasattr(args, "func"):
+        args.func(args)
+    else:
+        parser.print_help()
 
 if __name__ == "__main__":
     main()
+
+
 
 
