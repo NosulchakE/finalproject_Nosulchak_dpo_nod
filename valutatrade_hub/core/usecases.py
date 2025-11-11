@@ -12,6 +12,7 @@ from valutatrade_hub.core.exceptions import (
 )
 from valutatrade_hub.infra.settings import SettingsLoader
 
+settings = SettingsLoader()
 DATA_DIR = "data"
 USERS_FILE = os.path.join(DATA_DIR, "users.json")
 PORTFOLIOS_FILE = os.path.join(DATA_DIR, "portfolios.json")
@@ -129,34 +130,75 @@ def sell_currency(user_id: int, currency_code: str, amount: float):
 # -------------------------
 # Курсы валют
 # -------------------------
-def get_rate(from_currency: str, to_currency: str):
-    rates = _load_json(RATES_FILE).get("pairs", {})
-    pair_key = f"{from_currency.upper()}_{to_currency.upper()}"
-    if pair_key not in rates:
-        raise CurrencyNotFoundError(f"Курс для '{pair_key}' не найден")
-    rate = rates[pair_key]["rate"]
-    updated_at = rates[pair_key]["updated_at"]
-    return rate, updated_at
+def get_rate(from_code: str, to_code: str):
+    """Возвращает текущий курс from_code → to_code с учётом TTL кэша."""
+    rates_file = settings.RATES_FILE
+    ttl_seconds = settings.RATES_TTL_SECONDS
 
-def update_rates(source=None):
-    cfg = SettingsLoader()
-    url = f"https://v6.exchangerate-api.com/v6/{cfg.EXCHANGERATE_API_KEY}/latest/USD"
+    # Проверяем существование файла
+    if not os.path.exists(rates_file):
+        raise ApiRequestError("Локальный кеш курсов пуст. Выполните 'update-rates'.")
+
+    with open(rates_file, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    pair_key = f"{from_code.upper()}_{to_code.upper()}"
+    pair_data = data.get("pairs", {}).get(pair_key)
+
+    if not pair_data:
+        raise CurrencyNotFoundError(f"Курс для '{pair_key}' не найден в кеше.")
+
+    # Проверяем TTL
+    updated_at = datetime.fromisoformat(pair_data["updated_at"])
+    now = datetime.now(timezone.utc)
+    delta = (now - updated_at).total_seconds()
+
+    if delta > ttl_seconds:
+        raise ApiRequestError(f"Данные устарели ({delta:.0f}s). Выполните 'update-rates'.")
+
+    return pair_data["rate"], pair_data["updated_at"]
+
+
+def update_rates():
+    """Обновляет локальный кеш курсов через ExchangeRate-API."""
+    api_key = settings.EXCHANGERATE_API_KEY
+    base_currency = settings.BASE_CURRENCY
+    rates_file = settings.RATES_FILE
+    url = f"https://v6.exchangerate-api.com/v6/{api_key}/latest/{base_currency}"
+
     try:
-        resp = requests.get(url, timeout=cfg.REQUEST_TIMEOUT)
+        resp = requests.get(url, timeout=settings.REQUEST_TIMEOUT)
         resp.raise_for_status()
         data = resp.json()
-        if data.get("result") != "success":
-            raise ApiRequestError("Ошибка при запросе ExchangeRate-API")
-        pairs = {}
-        timestamp = datetime.utcnow().isoformat() + "Z"
-        for code, rate in data["rates"].items():
-            pairs[f"{code}_USD"] = {"rate": rate, "updated_at": timestamp, "source": "ExchangeRate-API"}
+    except requests.RequestException as e:
+        raise ApiRequestError(f"Ошибка при обращении к API ExchangeRate: {str(e)}")
 
-        rates_json = {"pairs": pairs, "last_refresh": timestamp}
-        _save_json(RATES_FILE, rates_json)
-        return len(pairs)
-    except requests.exceptions.RequestException as e:
-        raise ApiRequestError(str(e))
+    if data.get("result") != "success":
+        raise ApiRequestError(f"API вернуло ошибку: {data}")
+
+    # Формируем структуру для rates.json
+    rates = {}
+    now_iso = datetime.now(timezone.utc).isoformat()
+    for currency, rate in data.get("rates", {}).items():
+        pair_key = f"{currency.upper()}_{base_currency.upper()}"
+        rates[pair_key] = {
+            "rate": rate,
+            "updated_at": now_iso,
+            "source": "ExchangeRate-API"
+        }
+
+    cache = {
+        "pairs": rates,
+        "last_refresh": now_iso
+    }
+
+    # Запись атомарно
+    tmp_file = rates_file + ".tmp"
+    with open(tmp_file, "w", encoding="utf-8") as f:
+        json.dump(cache, f, ensure_ascii=False, indent=4)
+    os.replace(tmp_file, rates_file)
+
+    return len(rates)
 
 def show_rates(currency=None, top=None, base="USD"):
     data = _load_json(RATES_FILE)
@@ -174,6 +216,7 @@ def show_rates(currency=None, top=None, base="USD"):
     print(f"Rates from cache (updated at {data.get('last_refresh', 'N/A')}):")
     for pair, info in filtered.items():
         print(f"- {pair}: {info['rate']}")
+
 
 
 
