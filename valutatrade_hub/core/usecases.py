@@ -1,210 +1,138 @@
 # valutatrade_hub/core/usecases.py
-import json
-import hashlib
 import os
-from datetime import datetime, timezone
-import requests
+import json
+from datetime import datetime
 
-from valutatrade_hub.core.exceptions import (
-    InsufficientFundsError,
-    CurrencyNotFoundError,
-    ApiRequestError
-)
-from valutatrade_hub.infra.settings import SettingsLoader
+from valutatrade_hub.core.users import User, Portfolio, Wallet, get_user_by_username, save_users, save_portfolios
+from valutatrade_hub.parser_service.updater import RatesUpdater
+from valutatrade_hub.core.exceptions import InsufficientFundsError, CurrencyNotFoundError, ApiRequestError
 
-SETTINGS = SettingsLoader()
-DATA_DIR = "data"
-USERS_FILE = os.path.join(DATA_DIR, "users.json")
-PORTFOLIOS_FILE = os.path.join(DATA_DIR, "portfolios.json")
+USERS_FILE = os.path.join("data", "users.json")
+PORTFOLIOS_FILE = os.path.join("data", "portfolios.json")
+RATES_FILE = os.path.join("data", "rates.json")
 
-RATES_FILE = SETTINGS.get("RATES_FILE_PATH", "data/rates.json")
-API_KEY = os.getenv("EXCHANGERATE_API_KEY")  # твой ключ 1a4a95b327278c18d57643bb
-BASE_FIAT = SETTINGS.get("BASE_FIAT_CURRENCY", "USD")
-# -------------------------
-# Пользователи
-# -------------------------
+
+def register_user(username: str, password: str) -> User:
+    """Регистрация нового пользователя"""
+    users = _load_json(USERS_FILE)
+    if any(u["username"] == username for u in users):
+        raise ValueError("Пользователь с таким именем уже существует")
+    user_id = max([u["user_id"] for u in users], default=0) + 1
+    user = User(user_id=user_id, username=username, password=password)
+    users.append(user.to_dict())
+    save_users(users)
+    # Создаем пустой портфель
+    portfolios = _load_json(PORTFOLIOS_FILE)
+    portfolios.append({"user_id": user_id, "wallets": []})
+    save_portfolios(portfolios)
+    return user
+
+
+def login_user(username: str, password: str) -> User:
+    """Авторизация пользователя"""
+    user = get_user_by_username(username)
+    if not user or not user.check_password(password):
+        raise ValueError("Неверное имя пользователя или пароль")
+    return user
+
+
+def show_portfolio(user_id: int, base_currency="USD") -> None:
+    """Показать портфель пользователя с оценкой в базовой валюте"""
+    portfolio_data = _load_portfolio(user_id)
+    rates = _load_rates()
+    total_value = 0.0
+    print(f"Портфель пользователя {user_id} (в {base_currency}):")
+    for wallet_data in portfolio_data["wallets"]:
+        currency = wallet_data["currency"]
+        balance = wallet_data["balance"]
+        rate = rates.get(currency, {}).get(base_currency)
+        if rate is None:
+            print(f"- {currency}: {balance} (нет курса для конвертации в {base_currency})")
+            continue
+        value = balance * rate
+        total_value += value
+        print(f"- {currency}: {balance} → {value:.2f} {base_currency}")
+    print(f"Общая стоимость: {total_value:.2f} {base_currency}")
+
+
+def buy_currency(user_id: int, currency: str, amount: float) -> None:
+    """Покупка валюты"""
+    if amount <= 0:
+        raise ValueError("Сумма должна быть положительной")
+    portfolio = _load_portfolio(user_id)
+    wallet = _get_or_create_wallet(portfolio, currency)
+    wallet["balance"] += amount
+    _save_portfolio(portfolio)
+
+
+def sell_currency(user_id: int, currency: str, amount: float) -> None:
+    """Продажа валюты"""
+    if amount <= 0:
+        raise ValueError("Сумма должна быть положительной")
+    portfolio = _load_portfolio(user_id)
+    wallet = _get_or_create_wallet(portfolio, currency)
+    if wallet["balance"] < amount:
+        raise InsufficientFundsError(f"Недостаточно средств: {wallet['balance']} {currency}")
+    wallet["balance"] -= amount
+    _save_portfolio(portfolio)
+
+
+def get_rate(from_currency: str, to_currency: str):
+    """Получить курс валюты из кэша rates.json"""
+    rates = _load_rates()
+    pair = rates.get(from_currency.upper())
+    if not pair or to_currency.upper() not in pair:
+        raise CurrencyNotFoundError(f"Курс {from_currency}->{to_currency} не найден")
+    rate_info = pair[to_currency.upper()]
+    return rate_info["rate"], rate_info.get("timestamp", "N/A")
+
+
+# ======== Вспомогательные функции ========
+
 def _load_json(file_path):
     if not os.path.exists(file_path):
         return []
     with open(file_path, "r", encoding="utf-8") as f:
         return json.load(f)
 
-def _save_json(file_path, data):
-    with open(file_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
 
-def register_user(username: str, password: str):
-    if not username:
-        raise ValueError("Имя пользователя не может быть пустым")
-    if len(password) < 4:
-        raise ValueError("Пароль должен быть не короче 4 символов")
-
-    users = _load_json(USERS_FILE)
-    if any(u["username"] == username for u in users):
-        raise ValueError(f"Имя пользователя '{username}' уже занято")
-
-    salt = os.urandom(8).hex()
-    hashed_password = hashlib.sha256((password + salt).encode()).hexdigest()
-    user_id = max([u["user_id"] for u in users], default=0) + 1
-    user = {
-        "user_id": user_id,
-        "username": username,
-        "hashed_password": hashed_password,
-        "salt": salt,
-        "registration_date": datetime.now(timezone.utc).isoformat()
-    }
-    users.append(user)
-    _save_json(USERS_FILE, users)
-
-    # Создаём пустой портфель
+def _load_portfolio(user_id: int):
     portfolios = _load_json(PORTFOLIOS_FILE)
-    portfolios.append({"user_id": user_id, "wallets": {}})
+    for p in portfolios:
+        if p["user_id"] == user_id:
+            return p
+    # если портфель отсутствует, создаём
+    p = {"user_id": user_id, "wallets": []}
+    portfolios.append(p)
     _save_json(PORTFOLIOS_FILE, portfolios)
-    return user_id
+    return p
 
-def login_user(username: str, password: str):
-    users = _load_json(USERS_FILE)
-    user = next((u for u in users if u["username"] == username), None)
-    if not user:
-        raise ValueError(f"Пользователь '{username}' не найден")
 
-    hashed_check = hashlib.sha256((password + user["salt"]).encode()).hexdigest()
-    if hashed_check != user["hashed_password"]:
-        raise ValueError("Неверный пароль")
-    return user["user_id"]
-
-# -------------------------
-# Портфель
-# -------------------------
-def show_portfolio(user_id: int, base="USD"):
+def _save_portfolio(portfolio_data):
     portfolios = _load_json(PORTFOLIOS_FILE)
-    portfolio = next((p for p in portfolios if p["user_id"] == user_id), None)
-    if not portfolio or not portfolio["wallets"]:
-        print("Кошельки отсутствуют")
-        return
-
-    rates = _load_json(RATES_FILE).get("pairs", {})
-    total_base = 0.0
-    print(f"Портфель пользователя (база: {base}):")
-    for code, wallet in portfolio["wallets"].items():
-        balance = wallet["balance"]
-        pair_key = f"{code}_{base}"
-        rate = rates.get(pair_key, {}).get("rate", 1.0)
-        value_base = balance * rate
-        total_base += value_base
-        print(f"- {code}: {balance:.4f} → {value_base:.2f} {base}")
-    print("-" * 30)
-    print(f"ИТОГО: {total_base:.2f} {base}")
-
-def buy_currency(user_id: int, currency_code: str, amount: float):
-    if amount <= 0:
-        raise ValueError("'amount' должен быть положительным числом")
-    portfolios = _load_json(PORTFOLIOS_FILE)
-    portfolio = next((p for p in portfolios if p["user_id"] == user_id), None)
-    if not portfolio:
-        raise ValueError("Портфель не найден")
-
-    wallets = portfolio["wallets"]
-    if currency_code not in wallets:
-        wallets[currency_code] = {"balance": 0.0}
-
-    wallets[currency_code]["balance"] += amount
+    for i, p in enumerate(portfolios):
+        if p["user_id"] == portfolio_data["user_id"]:
+            portfolios[i] = portfolio_data
+            break
     _save_json(PORTFOLIOS_FILE, portfolios)
-    print(f"Покупка выполнена: {amount:.4f} {currency_code}")
 
-def sell_currency(user_id: int, currency_code: str, amount: float):
-    if amount <= 0:
-        raise ValueError("'amount' должен быть положительным числом")
-    portfolios = _load_json(PORTFOLIOS_FILE)
-    portfolio = next((p for p in portfolios if p["user_id"] == user_id), None)
-    if not portfolio:
-        raise ValueError("Портфель не найден")
-    wallets = portfolio["wallets"]
-    if currency_code not in wallets:
-        raise InsufficientFundsError(f"У вас нет кошелька '{currency_code}'")
-    if wallets[currency_code]["balance"] < amount:
-        raise InsufficientFundsError(f"Недостаточно средств: доступно {wallets[currency_code]['balance']:.4f} {currency_code}, требуется {amount:.4f} {currency_code}")
 
-    wallets[currency_code]["balance"] -= amount
-    _save_json(PORTFOLIOS_FILE, portfolios)
-    print(f"Продажа выполнена: {amount:.4f} {currency_code}")
+def _get_or_create_wallet(portfolio, currency: str):
+    currency = currency.upper()
+    for wallet in portfolio["wallets"]:
+        if wallet["currency"] == currency:
+            return wallet
+    wallet = {"currency": currency, "balance": 0.0}
+    portfolio["wallets"].append(wallet)
+    return wallet
 
-# -------------------------
-# Курсы валют
-# -------------------------
-def get_rate(from_code: str, to_code: str):
-    """Возвращает актуальный курс из локального кеша"""
-    from_code = from_code.upper()
-    to_code = to_code.upper()
 
-    if not os.path.exists(RATES_FILE):
-        raise ApiRequestError("Локальный кеш курсов отсутствует")
-
-    with open(RATES_FILE, "r") as f:
-        data = json.load(f)
-
-    pair = f"{from_code}_{to_code}"
-    if pair not in data.get("pairs", {}):
-        raise CurrencyNotFoundError(f"Курс для '{pair}' не найден в кеше")
-
-    rate_info = data["pairs"][pair]
-    return rate_info["rate"], rate_info["updated_at"]
-
-def update_rates(source: str = None) -> int:
-    """
-    Обновление локального кеша курсов (rates.json)
-    source: "exchangerate" - только ExchangeRate-API
-    """
-    updated = 0
-    rates_data = {"pairs": {}, "last_refresh": None}
-
-    # ExchangeRate-API
-    if source is None or source.lower() == "exchangerate":
-        url = f"https://v6.exchangerate-api.com/v6/{API_KEY}/latest/{BASE_FIAT}"
-        try:
-            resp = requests.get(url, timeout=10)
-            resp.raise_for_status()
-            payload = resp.json()
-            if payload.get("result") != "success":
-                raise ApiRequestError(f"ExchangeRate-API returned error: {payload.get('error-type')}")
-            timestamp = datetime.utcnow().isoformat() + "Z"
-            for code, rate in payload.get("rates", {}).items():
-                pair = f"{code}_{BASE_FIAT}"
-                rates_data["pairs"][pair] = {
-                    "rate": rate,
-                    "updated_at": timestamp,
-                    "source": "ExchangeRate-API"
-                }
-                updated += 1
-            rates_data["last_refresh"] = timestamp
-        except requests.RequestException as e:
-            raise ApiRequestError(f"Ошибка запроса к ExchangeRate-API: {e}")
-
-    # Сохраняем локальный кеш
-    os.makedirs(os.path.dirname(RATES_FILE), exist_ok=True)
-    tmp_file = RATES_FILE + ".tmp"
-    with open(tmp_file, "w") as f:
-        json.dump(rates_data, f, indent=2)
-    os.replace(tmp_file, RATES_FILE)
-
-    return updated
-
-def show_rates(currency=None, top=None, base="USD"):
+def _load_rates():
+    """Загрузить курсы валют из кэша"""
     data = _load_json(RATES_FILE)
-    pairs = data.get("pairs", {})
-    filtered = {}
-    for pair, info in pairs.items():
-        if currency and not pair.startswith(currency.upper()):
-            continue
-        filtered[pair] = info
+    return data.get("pairs", {}) if isinstance(data, dict) else {}
 
-    # сортировка по значению курса (descending) если top задан
-    if top:
-        filtered = dict(sorted(filtered.items(), key=lambda x: x[1]["rate"], reverse=True)[:top])
 
-    print(f"Rates from cache (updated at {data.get('last_refresh', 'N/A')}):")
-    for pair, info in filtered.items():
-        print(f"- {pair}: {info['rate']}")
 
 
 
