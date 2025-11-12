@@ -1,30 +1,27 @@
 [tool.poetry]
 name = "valutatrade-hub"
-version = "1.0.0"
-description = "CLI-проект ValutaTrade Hub — торговля и управление валютным портфелем"
+version = "0.1.0"
+description = "ValutaTrade Hub — учебный CLI-проект для торговли валютами с логированием и API-курсами."
 authors = ["Your Name <you@example.com>"]
 readme = "README.md"
 packages = [{ include = "valutatrade_hub" }]
-license = "MIT"
-homepage = "https://example.com"
 
 [tool.poetry.dependencies]
-python = "^3.11"
-requests = "^2.31"
-prettytable = "^3.6"
-python-dotenv = "^1.1.1"  # для загрузки .env файлов
-# добавь сюда другие зависимости, если нужно
+python = "^3.10"
+requests = "^2.32.3"
+prettytable = "^3.10.0"
+python-dotenv = "^1.0.1"
 
 [tool.poetry.group.dev.dependencies]
-ruff = "^0.4.0"
-pytest = "^8.0"
-black = "^24.0"
-isort = "^6.0"
+ruff = "^0.6.8"
+pytest = "^8.3.3"
 
 [tool.poetry.scripts]
-project = "valutatrade_hub.cli.interface:main"
+project = "main:main"
 
 [build-system]
-requires = ["poetry-core>=1.6.0"]
+requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+
 
