@@ -1,6 +1,5 @@
 # valutatrade_hub/cli/interface.py
 import argparse
-import sys
 from datetime import datetime
 
 from valutatrade_hub.core.usecases import (
@@ -18,7 +17,7 @@ from valutatrade_hub.core.exceptions import (
     ApiRequestError,
 )
 
-# Простая глобальная переменная для текущей сессии
+# Глобальная переменная для текущей сессии
 CURRENT_USER = None
 
 
@@ -90,7 +89,7 @@ def cmd_get_rate(args):
 
 
 def cmd_update_rates(args):
-    """Обновить курсы валют"""
+    """Обновить курсы валют через ExchangeRate-API"""
     try:
         updater = RatesUpdater(source=args.source)
         total = updater.run_update()
@@ -102,7 +101,7 @@ def cmd_update_rates(args):
         print(f"Ошибка API: {e}")
 
 
-def run_cli():
+def main():
     """Главная функция CLI"""
     parser = argparse.ArgumentParser(description="ValutaTrade CLI")
     subparsers = parser.add_subparsers(title="Commands")
@@ -155,7 +154,8 @@ def run_cli():
 
 
 if __name__ == "__main__":
-    run_cli()
+    main()
+
 
 
 
