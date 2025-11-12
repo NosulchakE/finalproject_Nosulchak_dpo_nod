@@ -101,7 +101,13 @@ def cmd_update_rates(args):
         print(f"Ошибка API: {e}")
 
 
-def main():
+def cmd_exit(args=None):
+    """Выйти из CLI"""
+    print("Выход...")
+    exit(0)
+
+
+def run_cli():
     """Главная функция CLI"""
     parser = argparse.ArgumentParser(description="ValutaTrade CLI")
     subparsers = parser.add_subparsers(title="Commands")
@@ -146,6 +152,10 @@ def main():
     parser_update.add_argument("--source", default=None)
     parser_update.set_defaults(func=cmd_update_rates)
 
+    # exit
+    parser_exit = subparsers.add_parser("exit", help="Выйти из CLI")
+    parser_exit.set_defaults(func=cmd_exit)
+
     args = parser.parse_args()
     if hasattr(args, "func"):
         args.func(args)
@@ -154,7 +164,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    run_cli()
+
+
 
 
 
