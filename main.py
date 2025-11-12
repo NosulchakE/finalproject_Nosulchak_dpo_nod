@@ -20,10 +20,11 @@ def print_banner():
 
 def main():
     print_banner()
-    cli_main()
+    run_cli()
 
 if __name__ == "__main__":
     main()
+
 
 
 
