@@ -2,5 +2,18 @@
   {
     "user_id": 1,
     "wallets": []
+  },
+  {
+    "user_id": 2,
+    "wallets": [
+      {
+        "currency": "USD",
+        "balance": 9891.304347826086
+      },
+      {
+        "currency": "EUR",
+        "balance": 100.0
+      }
+    ]
   }
 ]
