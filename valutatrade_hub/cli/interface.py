@@ -26,8 +26,8 @@ def cmd_register(args):
     try:
         user = register_user(args.username, args.password)
         print(
-            f"Пользователь '{user.username}' зарегистрирован (id={user.user_id}). "
-            f"Войдите: login --username {user.username} --password ****"
+            f"Пользователь '{user['username']}' зарегистрирован (id={user['user_id']}). "
+            f"Войдите: login --username {user['username']} --password ****"
         )
     except ValueError as e:
         print(f"Ошибка: {e}")
@@ -39,7 +39,7 @@ def cmd_login(args):
     try:
         user = login_user(args.username, args.password)
         CURRENT_USER = user
-        print(f"Вы вошли как '{user.username}'")
+        print(f"Вы вошли как '{user['username']}'")
     except ValueError as e:
         print(f"Ошибка: {e}")
 
@@ -50,9 +50,9 @@ def cmd_show_portfolio(args):
         print("Сначала выполните login")
         return
     try:
-        show_portfolio(CURRENT_USER.user_id, base_currency=args.base)
+        show_portfolio(CURRENT_USER['user_id'], base_currency=args.base)
     except CurrencyNotFoundError as e:
-        print(f"Ошибка: {e}")
+        print(e)
 
 
 def cmd_buy(args):
@@ -61,7 +61,7 @@ def cmd_buy(args):
         print("Сначала выполните login")
         return
     try:
-        buy_currency(CURRENT_USER.user_id, args.currency, args.amount)
+        buy_currency(CURRENT_USER['user_id'], args.currency, args.amount)
     except (ValueError, CurrencyNotFoundError, ApiRequestError) as e:
         print(f"Ошибка: {e}")
 
@@ -72,7 +72,7 @@ def cmd_sell(args):
         print("Сначала выполните login")
         return
     try:
-        sell_currency(CURRENT_USER.user_id, args.currency, args.amount)
+        sell_currency(CURRENT_USER['user_id'], args.currency, args.amount)
     except (InsufficientFundsError, ValueError, CurrencyNotFoundError, ApiRequestError) as e:
         print(f"Ошибка: {e}")
 
@@ -89,7 +89,7 @@ def cmd_get_rate(args):
 
 
 def cmd_update_rates(args):
-    """Обновить курсы валют"""
+    """Обновить курсы валют через ExchangeRate-API"""
     try:
         updater = RatesUpdater(source=args.source)
         total = updater.run_update()
@@ -165,6 +165,7 @@ def run_cli():
 
 if __name__ == "__main__":
     run_cli()
+
 
 
 
