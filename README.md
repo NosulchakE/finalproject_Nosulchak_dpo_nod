@@ -28,37 +28,70 @@ php-template
 
 ## 🏗️ Архитектура проекта
 ```
-valutatrade_hub/
-├── core/
-│ ├── currencies.py # Иерархия валют и валидация
-│ ├── exceptions.py # Исключения
-│ ├── models.py # User, Wallet, Portfolio
-│ ├── usecases.py # Бизнес-логика: buy/sell/get_rate
-│ └── utils.py
+finalproject_Nosulchak_dpo_nod/
+│  
+├── data/                           # Хранилище данных
+│    ├── users.json                 # Пользователи системы
+│    ├── portfolios.json            # Портфели пользователей  
+│    └── rates.json                 # Кэш текущих курсов валют
 │
-├── infra/
-│ ├── settings.py # SettingsLoader (TTL, пути, база)
-│ └── database.py # DatabaseManager (JSON-хранилище)
+├── valutatrade_hub/               # Основной пакет приложения
+│    ├── __init__.py
+│    ├── logging_config.py         # Настройка логов (формат, уровень, ротация)
+│    ├── decorators.py             # @log_action (логирование операций)
+│    ├── core/                     # Ядро приложения - бизнес-логика
+│    │    ├── __init__.py
+│    │    ├── currencies.py        # Базовый класс Currency и наследники Fiat/Crypto
+│    │    ├── exceptions.py        # Пользовательские исключения
+│    │    ├── models.py            # Модели данных (User, Wallet, Portfolio)
+│    │    ├── usecases.py          # Бизнес-сценарии с исключениями и логированием
+│    │    └── utils.py             # Вспомогательные функции (валидация, конвертация)
+│    ├── infra/                    # Инфраструктурный слой
+│    │    ├─ __init__.py
+│    │    ├── settings.py          # Singleton SettingsLoader (конфигурация)
+│    │    └── database.py          # Singleton DatabaseManager (абстракция над JSON)
+│    ├── parser_service/           # Сервис парсинга курсов валют
+│    │    ├── __init__.py
+│    │    ├── config.py            # Конфигурация API и параметров
+│    │    ├── api_clients.py       # Клиенты внешних API (ExchangeRate-API)
+│    │    ├── updater.py           # Логика обновления и кэширования курсов
+│    │    └── storage.py           # Работа с историческими данными
+│    └── cli/                      # Командный интерфейс
+│         ├─ __init__.py
+│         └─ interface.py          # Интерактивный CLI
 │
-├── parser_service/
-│ ├── api_clients.py # Внешние источники курсов
-│ ├── updater.py # Сбор и объединение данных
-│ └── storage.py # Безопасная запись в rates.json
-│
-├── cli/
-│ └── interface.py # Команды CLI
-│
-├── logging_config.py # Настройка логов и формат
-├── decorators.py # @log_action
-├── data/
-│ ├── users.json
-│ ├── portfolios.json
-│ └── rates.json
-└── main.py # Точка входа
+├── main.py                        # Точка входа в приложение
+├── Makefile                       # Автоматизация задач
+├── poetry.lock                    # Poetry lock-файл
+├── pyproject.toml                 # Конфигурация проекта и зависимости
+├── README.md                      # Документация проекта
+└── .gitignore                     # Игнорируемые файлы Git
 ```
-yaml
-Копировать код
+Ключевые особенности архитектуры:
+🏗️ Слоистая архитектура:
+core/ - Чистая бизнес-логика
 
+infra/ - Инфраструктурные concerns
+
+parser_service/ - Внешние интеграции
+
+cli/ - Презентационный слой
+
+🔧 Принципы проектирования:
+Singleton для настроек и БД
+
+Декораторы для cross-cutting concerns
+
+Исключения для обработки ошибок
+
+Абстракция над хранилищем
+
+📁 Данные:
+JSON файлы для persistent storage
+
+Разделение текущих и исторических данных
+
+Логирование операций в отдельный файл
 ---
 ```
 ## ⚙️ Установка и запуск
@@ -89,35 +122,33 @@ update-rates	(опционально) --source	Обновление курсов
 ```
 🧠 Примеры использования
 ```
-bash
-Копировать код
 # Регистрация
 ```
-poetry run project register --username alice --password 12345
+ register --username alice --password 12345
 ```
 # Вход
 ```
-poetry run project login --username alice --password 12345
+ login --username alice --password 12345
 ```
 # Покупка
 ```
-poetry run project buy --currency BTC --amount 0.05
+ buy --currency BTC --amount 0.05
 ```
 # Просмотр портфеля
 ```
-poetry run project show-portfolio --base USD
+ show-portfolio --base USD
 ```
 # Проверка курса
 ```
-poetry run project get-rate --from_currency USD --to_currency EUR
+ get-rate --from_currency USD --to_currency EUR
 ```
 # Продажа
 ```
-poetry run project sell --currency BTC --amount 0.02
+ sell --currency BTC --amount 0.02
 ```
 # Обновление курсов
 ```
-poetry run project update-rates
+ update-rates
 ```
 🧱 Логирование
 ```
@@ -174,5 +205,6 @@ make publish	Публикация
 
 Автор: Nosulchak
 Год: 2025
+
 
 
