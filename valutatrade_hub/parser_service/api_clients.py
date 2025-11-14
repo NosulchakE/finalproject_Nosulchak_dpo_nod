@@ -1,9 +1,8 @@
 # valutatrade_hub/parser_service/api_clients.py
 import requests
-from typing import Dict, Any
+from typing import Dict
 
 from .config import ParserConfig
-from valutatrade_hub.core.exceptions import ApiRequestError
 
 
 class ExchangeRateAPI:
@@ -30,7 +29,7 @@ class ExchangeRateAPI:
                 print("❌ API ключ не установлен в .env файле")
                 return self._get_mock_rates()
         
-            print(f"🌐 Запрос к ExchangeRate-API...")
+            print("🌐 Запрос к ExchangeRate-API...")
             print(f"🔑 Ключ: {self.api_key[:8]}...{self.api_key[-4:]}")
         
             response = requests.get(self.base_url, timeout=self.timeout)
@@ -72,11 +71,8 @@ class ExchangeRateAPI:
             currency: 1.0 if currency == self.config.BASE_CURRENCY else 0.1 * i
             for i, currency in enumerate(self.config.FIAT_CURRENCIES + self.config.CRYPTO_CURRENCIES, 1)
         }# valutatrade_hub/parser_service/api_clients.py
-import requests
-from typing import Dict, Any
+from typing import Dict
 
-from .config import ParserConfig
-from valutatrade_hub.core.exceptions import ApiRequestError
 
 
 class ExchangeRateAPI:
@@ -101,7 +97,7 @@ class ExchangeRateAPI:
         Получает актуальные курсы валют относительно USD
         """
         try:
-            print(f"🌐 Запрос к ExchangeRate-API...")
+            print("🌐 Запрос к ExchangeRate-API...")
             
             # Проверяем наличие API ключа
             if not self.config.EXCHANGERATE_API_KEY:

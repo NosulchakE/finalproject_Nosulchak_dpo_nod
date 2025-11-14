@@ -1,5 +1,5 @@
 import functools
-from typing import Callable, Optional, Any
+from typing import Callable
 from valutatrade_hub.logging_config import logger
 from valutatrade_hub.core.usecases import get_current_user
 
@@ -58,7 +58,7 @@ def log_action(action: str, verbose: bool = True):
                 log_parts = [
                     f"action={action}",
                     f"user='{username}'",
-                    f"result=ERROR",
+                    "result=ERROR",
                     f"error_type={error_type}",
                     f"error_message='{error_message}'"
                 ]
