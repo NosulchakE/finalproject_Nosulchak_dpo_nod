@@ -1,5 +1,5 @@
 # main.py
-from valutatrade_hub.cli.interface import run_cli as cli_main
+from valutatrade_hub.cli.interface import run_interactive_cli
 
 
 def print_banner():
@@ -21,10 +21,11 @@ def print_banner():
 
 def main():
     print_banner()
-    cli_main()
+    run_interactive_cli()
 
 if __name__ == "__main__":
     main()
+
 
 
 
