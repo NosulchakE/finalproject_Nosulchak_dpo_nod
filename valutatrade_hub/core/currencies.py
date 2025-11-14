@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Dict, Type
+from typing import Dict
 from .exceptions import CurrencyNotFoundError
 
 

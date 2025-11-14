@@ -1,5 +1,4 @@
 # valutatrade_hub/cli/interface.py
-from datetime import datetime
 
 from valutatrade_hub.core.usecases import (
     register_user,
