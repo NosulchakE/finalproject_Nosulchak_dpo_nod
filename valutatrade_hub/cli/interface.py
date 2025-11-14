@@ -9,7 +9,7 @@ from valutatrade_hub.core.usecases import (
     sell_currency,
     get_rate,
 )
-from valutatrade_hub.parser_service.updater import RatesUpdater
+from valutatrade_hub.parser_service.updater import RatesUpdater  # ← ИСПРАВЛЕННЫЙ ИМПОРТ
 from valutatrade_hub.core.exceptions import (
     InsufficientFundsError,
     CurrencyNotFoundError,
@@ -192,6 +192,7 @@ def run_interactive_cli():
             break
         except Exception as e:
             print(f"Ошибка: {e}")
+
 
 
 
