@@ -24,9 +24,7 @@ class ExchangeRateAPI:
         self.supported_currencies[self.config.BASE_CURRENCY] = "Base"
     
     def get_rates(self) -> Dict[str, float]:
-    """
-    Получает актуальные курсы валют
-    """
+    """Получает актуальные курсы валют"""
     try:
         if not self.api_key:
             print("❌ API ключ не установлен в .env файле")
@@ -137,6 +135,7 @@ class ExchangeRateAPI:
             currency: 1.0 if currency == self.config.BASE_CURRENCY else 0.1 * i
             for i, currency in enumerate(self.config.FIAT_CURRENCIES + self.config.CRYPTO_CURRENCIES, 1)
         }
+
 
 
 
