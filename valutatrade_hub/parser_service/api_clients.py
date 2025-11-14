@@ -1,9 +1,8 @@
 # valutatrade_hub/parser_service/api_clients.py
-import os
 import requests
 from typing import Dict, Any
 
-from valutatrade_hub.infra.settings import SettingsLoader
+from .config import ParserConfig
 from valutatrade_hub.core.exceptions import ApiRequestError
 
 
@@ -11,48 +10,46 @@ class ExchangeRateAPI:
     """Клиент для работы с ExchangeRate-API"""
     
     def __init__(self):
-        self.settings = SettingsLoader()
-        self.api_key = self.settings.EXCHANGERATE_API_KEY
-        self.base_url = "https://api.exchangerate-api.com/v4/latest/USD"
-        self.timeout = self.settings.REQUEST_TIMEOUT
+        self.config = ParserConfig()
+        self.base_url = f"{self.config.EXCHANGERATE_API_URL}/{self.config.EXCHANGERATE_API_KEY}/latest/{self.config.BASE_CURRENCY}"
+        self.timeout = self.config.REQUEST_TIMEOUT
         
-        # Список поддерживаемых валют
+        # Объединяем все поддерживаемые валюты
         self.supported_currencies = {
-            "EUR": "Euro",
-            "GBP": "British Pound", 
-            "JPY": "Japanese Yen",
-            "CAD": "Canadian Dollar",
-            "CHF": "Swiss Franc",
-            "AUD": "Australian Dollar",
-            "CNY": "Chinese Yuan",
-            "BTC": "Bitcoin",
-            "ETH": "Ethereum",
-            "RUB": "Russian Ruble",
+            currency: "Fiat" for currency in self.config.FIAT_CURRENCIES
         }
+        self.supported_currencies.update({
+            currency: "Crypto" for currency in self.config.CRYPTO_CURRENCIES
+        })
+        self.supported_currencies[self.config.BASE_CURRENCY] = "Base"
     
     def get_rates(self) -> Dict[str, float]:
         """
         Получает актуальные курсы валют относительно USD
-        
-        Returns:
-            Dict[str, float]: Словарь с курсами валют
         """
         try:
             print(f"🌐 Запрос к ExchangeRate-API...")
             
-            # В реальной реализации здесь будет запрос к API
-            # response = requests.get(self.base_url, timeout=self.timeout)
-            # response.raise_for_status()
-            # data = response.json()
-            # return data.get('rates', {})
+            # Проверяем наличие API ключа
+            if not self.config.EXCHANGERATE_API_KEY:
+                print("❌ API ключ не установлен. Используются тестовые данные")
+                return self._get_mock_rates()
             
-            # ЗАГЛУШКА: возвращаем тестовые данные
-            print("⚠️ Используются тестовые данные (API отключено)")
-            return self._get_mock_rates()
+            response = requests.get(self.base_url, timeout=self.timeout)
+            response.raise_for_status()
+            data = response.json()
+            
+            if data.get('result') == 'success':
+                rates = data.get('conversion_rates', {})
+                print(f"✅ Получено {len(rates)} курсов валют от API")
+                return rates
+            else:
+                error_type = data.get('error-type', 'Unknown error')
+                print(f"❌ API ошибка: {error_type}")
+                return self._get_mock_rates()
             
         except requests.RequestException as e:
             print(f"❌ Ошибка сети: {e}")
-            # Возвращаем тестовые данные при ошибке
             return self._get_mock_rates()
         except Exception as e:
             print(f"❌ Неожиданная ошибка: {e}")
@@ -60,17 +57,74 @@ class ExchangeRateAPI:
     
     def _get_mock_rates(self) -> Dict[str, float]:
         """Возвращает тестовые данные для разработки"""
+        print("⚠️ Используются тестовые данные")
         return {
-            "EUR": 0.92,
-            "GBP": 0.79, 
-            "JPY": 149.50,
-            "CAD": 1.36,
-            "CHF": 0.88,
-            "AUD": 1.52,
-            "CNY": 7.25,
-            "RUB": 92.50,
-            "BTC": 0.000016,  # 1 USD в BTC
-            "ETH": 0.00027,   # 1 USD в ETH
+            currency: 1.0 if currency == self.config.BASE_CURRENCY else 0.1 * i
+            for i, currency in enumerate(self.config.FIAT_CURRENCIES + self.config.CRYPTO_CURRENCIES, 1)
+        }# valutatrade_hub/parser_service/api_clients.py
+import requests
+from typing import Dict, Any
+
+from .config import ParserConfig
+from valutatrade_hub.core.exceptions import ApiRequestError
+
+
+class ExchangeRateAPI:
+    """Клиент для работы с ExchangeRate-API"""
+    
+    def __init__(self):
+        self.config = ParserConfig()
+        self.base_url = f"{self.config.EXCHANGERATE_API_URL}/{self.config.EXCHANGERATE_API_KEY}/latest/{self.config.BASE_CURRENCY}"
+        self.timeout = self.config.REQUEST_TIMEOUT
+        
+        # Объединяем все поддерживаемые валюты
+        self.supported_currencies = {
+            currency: "Fiat" for currency in self.config.FIAT_CURRENCIES
         }
+        self.supported_currencies.update({
+            currency: "Crypto" for currency in self.config.CRYPTO_CURRENCIES
+        })
+        self.supported_currencies[self.config.BASE_CURRENCY] = "Base"
+    
+    def get_rates(self) -> Dict[str, float]:
+        """
+        Получает актуальные курсы валют относительно USD
+        """
+        try:
+            print(f"🌐 Запрос к ExchangeRate-API...")
+            
+            # Проверяем наличие API ключа
+            if not self.config.EXCHANGERATE_API_KEY:
+                print("❌ API ключ не установлен. Используются тестовые данные")
+                return self._get_mock_rates()
+            
+            response = requests.get(self.base_url, timeout=self.timeout)
+            response.raise_for_status()
+            data = response.json()
+            
+            if data.get('result') == 'success':
+                rates = data.get('conversion_rates', {})
+                print(f"✅ Получено {len(rates)} курсов валют от API")
+                return rates
+            else:
+                error_type = data.get('error-type', 'Unknown error')
+                print(f"❌ API ошибка: {error_type}")
+                return self._get_mock_rates()
+            
+        except requests.RequestException as e:
+            print(f"❌ Ошибка сети: {e}")
+            return self._get_mock_rates()
+        except Exception as e:
+            print(f"❌ Неожиданная ошибка: {e}")
+            return self._get_mock_rates()
+    
+    def _get_mock_rates(self) -> Dict[str, float]:
+        """Возвращает тестовые данные для разработки"""
+        print("⚠️ Используются тестовые данные")
+        return {
+            currency: 1.0 if currency == self.config.BASE_CURRENCY else 0.1 * i
+            for i, currency in enumerate(self.config.FIAT_CURRENCIES + self.config.CRYPTO_CURRENCIES, 1)
+        }
+
 
 
