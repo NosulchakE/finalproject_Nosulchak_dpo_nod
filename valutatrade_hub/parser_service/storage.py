@@ -1,36 +1,56 @@
+# valutatrade_hub/parser_service/storage.py
 import json
-import os
+from pathlib import Path
+from datetime import datetime, timezone
+from typing import Dict, Any
+
 
 class RatesStorage:
-    def __init__(self, rates_file: str, history_file: str):
-        self.rates_file = rates_file
-        self.history_file = history_file
-
-    def save_rates(self, rates: dict):
-        # Обновление rates.json (текущий снимок)
-        snapshot = {"pairs": rates, "last_refresh": max(r["updated_at"] for r in rates.values())}
-        with open(self.rates_file, "w") as f:
-            json.dump(snapshot, f, indent=2)
+    """Класс для работы с историческими данными курсов"""
+    
+    def __init__(self):
+        self.data_file = Path("data/exchange_rates.json")
+        self.data_file.parent.mkdir(exist_ok=True)
+    
+    def save_rates(self, rates: Dict[str, Any]):
+        """
+        Сохраняет курсы валют с временной меткой
         
-        # Добавление в exchange_rates.json (история)
-        history = []
-        if os.path.exists(self.history_file):
-            with open(self.history_file, "r") as f:
-                try:
-                    history = json.load(f)
-                except json.JSONDecodeError:
-                    history = []
-        for code, val in rates.items():
-            entry = {
-                "id": f"{code}_{val['updated_at'].replace(':','')}",
-                "from_currency": code.split("_")[0],
-                "to_currency": code.split("_")[1],
-                "rate": val["rate"],
-                "timestamp": val["updated_at"],
-                "source": val["source"]
-            }
-            history.append(entry)
-        with open(self.history_file, "w") as f:
-            json.dump(history, f, indent=2)
+        Args:
+            rates: Словарь с курсами валют
+        """
+        # Загружаем существующие данные
+        data = self._load_data()
+        
+        # Добавляем новую запись
+        timestamp = datetime.now(timezone.utc).isoformat()
+        data[timestamp] = rates
+        
+        # Сохраняем обратно
+        self._save_data(data)
+    
+    def _load_data(self) -> Dict[str, Any]:
+        """Загружает данные из файла"""
+        if not self.data_file.exists():
+            return {}
+        
+        with open(self.data_file, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    
+    def _save_data(self, data: Dict[str, Any]):
+        """Сохраняет данные в файл"""
+        with open(self.data_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+    
+    def get_latest_rates(self) -> Dict[str, Any]:
+        """Возвращает последние сохраненные курсы"""
+        data = self._load_data()
+        if not data:
+            return {}
+        
+        # Берем последнюю временную метку
+        latest_timestamp = sorted(data.keys())[-1]
+        return data[latest_timestamp]
+
 
 
