@@ -18,14 +18,36 @@ def _save_json(file_path, data):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 def register_user(username: str, password: str) -> User:
-    users = _load_json(USERS_FILE)
-    if username in users:
-        raise ValueError("Пользователь уже существует")
-    user = User(username=username, password_hash=User.hash_password(password))
-    users[username] = user.to_dict()
-    _save_json(USERS_FILE, users)
-    return user
+    users = load_users()
+    portfolios = load_portfolios()
 
+    # Проверка, что такого username нет
+    for u in users:
+        if u.username == username:
+            raise ValueError("Пользователь с таким именем уже существует")
+
+    # Новый user_id
+    user_id = 1 if not users else max(u.user_id for u in users) + 1
+
+    # Создаём объект User
+    user = User(
+        user_id=user_id,
+        username=username,
+        password=password
+    )
+
+    # Сохраняем
+    users.append(user)
+    save_users(users)
+
+    # Создаём пустой портфель
+    portfolios.append({
+        "user_id": user_id,
+        "wallets": []
+    })
+    save_portfolios(portfolios)
+
+    return user
 def login_user(username: str, password: str) -> User:
     users = _load_json(USERS_FILE)
     if username not in users:
@@ -80,6 +102,7 @@ def update_rates(source=None):
     from valutatrade_hub.parser_service.updater import RatesUpdater
     updater = RatesUpdater(source=source)
     return updater.run_update()
+
 
 
 
