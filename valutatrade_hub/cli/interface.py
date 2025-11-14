@@ -52,7 +52,7 @@ def cmd_show_portfolio(args):
     try:
         show_portfolio(CURRENT_USER.user_id, base_currency=args.base)
     except CurrencyNotFoundError as e:
-        print(e)
+        print(f"Ошибка: {e}")
 
 
 def cmd_buy(args):
@@ -89,7 +89,7 @@ def cmd_get_rate(args):
 
 
 def cmd_update_rates(args):
-    """Обновить курсы валют через ExchangeRate-API"""
+    """Обновить курсы валют"""
     try:
         updater = RatesUpdater(source=args.source)
         total = updater.run_update()
@@ -165,7 +165,6 @@ def run_cli():
 
 if __name__ == "__main__":
     run_cli()
-
 
 
 
