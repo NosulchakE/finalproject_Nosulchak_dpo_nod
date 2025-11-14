@@ -4,29 +4,26 @@ from pathlib import Path
 from datetime import datetime, timezone
 from typing import Dict, Any
 
+from .config import ParserConfig
+
 
 class RatesStorage:
     """Класс для работы с историческими данными курсов"""
     
     def __init__(self):
-        self.data_file = Path("data/exchange_rates.json")
+        self.config = ParserConfig()
+        self.data_file = Path(self.config.HISTORY_FILE_PATH)
         self.data_file.parent.mkdir(exist_ok=True)
     
     def save_rates(self, rates: Dict[str, Any]):
         """
         Сохраняет курсы валют с временной меткой
-        
-        Args:
-            rates: Словарь с курсами валют
         """
-        # Загружаем существующие данные
         data = self._load_data()
         
-        # Добавляем новую запись
         timestamp = datetime.now(timezone.utc).isoformat()
         data[timestamp] = rates
         
-        # Сохраняем обратно
         self._save_data(data)
     
     def _load_data(self) -> Dict[str, Any]:
@@ -48,9 +45,9 @@ class RatesStorage:
         if not data:
             return {}
         
-        # Берем последнюю временную метку
         latest_timestamp = sorted(data.keys())[-1]
         return data[latest_timestamp]
+
 
 
 
