@@ -3,10 +3,10 @@ import json
 from valutatrade_hub.core.models import User
 from valutatrade_hub.core.exceptions import InsufficientFundsError, CurrencyNotFoundError, ApiRequestError
 
+
 USERS_FILE = "data/users.json"
 PORTFOLIOS_FILE = "data/portfolios.json"
-RATES_FILE = "data/rates.json"
-
+RATES_FILE = "data/rates.json"  
 # -----------------------------
 # Общие функции для JSON
 # -----------------------------
@@ -193,6 +193,7 @@ def get_current_user():
     """Получить текущего пользователя (для совместимости с декораторами)"""
     from valutatrade_hub.cli.interface import CURRENT_USER
     return CURRENT_USER
+
 
 
 
