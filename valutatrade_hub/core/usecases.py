@@ -7,9 +7,7 @@ from valutatrade_hub.core.exceptions import InsufficientFundsError, CurrencyNotF
 USERS_FILE = "data/users.json"
 PORTFOLIOS_FILE = "data/portfolios.json"
 RATES_FILE = "data/rates.json"  
-# -----------------------------
 # Общие функции для JSON
-# -----------------------------
 def _load_json(file_path):
     if not os.path.exists(file_path):
         if file_path.endswith("rates.json"):
@@ -23,9 +21,7 @@ def _save_json(file_path, data):
     with open(file_path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
-# -----------------------------
 # Пользователи
-# -----------------------------
 def load_users():
     return _load_json(USERS_FILE)
 
@@ -67,9 +63,7 @@ def login_user(username: str, password: str) -> dict:
         raise ValueError("Неверный логин или пароль")
     return user
 
-# -----------------------------
 # Портфель
-# -----------------------------
 def show_portfolio(user_id: int, base_currency="USD"):
     portfolios = _load_json(PORTFOLIOS_FILE)
     portfolio = next((p for p in portfolios if p["user_id"] == user_id), None)
@@ -172,9 +166,7 @@ def sell_currency(user_id: int, currency: str, amount: float):
     _save_json(PORTFOLIOS_FILE, portfolios)
     print(f"Продано {amount:.2f} {currency} за {revenue_usd:.2f} USD (курс: 1 {currency} = {rate:.4f} USD)")
 
-# -----------------------------
 # Курсы
-# -----------------------------
 def get_rate(from_currency: str, to_currency: str):
     data = _load_json(RATES_FILE)
     pair_key = f"{from_currency.upper()}_{to_currency.upper()}"
@@ -193,6 +185,7 @@ def get_current_user():
     """Получить текущего пользователя (для совместимости с декораторами)"""
     from valutatrade_hub.cli.interface import CURRENT_USER
     return CURRENT_USER
+
 
 
 
