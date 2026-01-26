@@ -8,7 +8,7 @@ from valutatrade_hub.core.usecases import (
     sell_currency,
     get_rate,
 )
-from valutatrade_hub.parser_service.updater import RatesUpdater  # ← ИСПРАВЛЕННЫЙ ИМПОРТ
+from valutatrade_hub.parser_service.updater import RatesUpdater  
 from valutatrade_hub.core.exceptions import (
     InsufficientFundsError,
     CurrencyNotFoundError,
@@ -20,7 +20,7 @@ CURRENT_USER = None
 
 
 def cmd_register_simple(username: str, password: str):
-    """Регистрация пользователя (упрощенная версия)"""
+    """Регистрация пользователя"""
     try:
         user = register_user(username, password)
         print(f"Пользователь '{user['username']}' зарегистрирован. ID: {user['user_id']}")
@@ -29,7 +29,7 @@ def cmd_register_simple(username: str, password: str):
 
 
 def cmd_login_simple(username: str, password: str):
-    """Авторизация пользователя (упрощенная версия)"""
+    """Авторизация пользователя """
     global CURRENT_USER
     try:
         user = login_user(username, password)
@@ -40,7 +40,7 @@ def cmd_login_simple(username: str, password: str):
 
 
 def cmd_show_portfolio_simple(base: str = "USD"):
-    """Показать портфель пользователя (упрощенная версия)"""
+    """Показать портфель пользователя """
     if not CURRENT_USER:
         print("Сначала выполните login")
         return
@@ -51,7 +51,7 @@ def cmd_show_portfolio_simple(base: str = "USD"):
 
 
 def cmd_buy_simple(currency: str, amount: float):
-    """Покупка валюты (упрощенная версия)"""
+    """Покупка валюты"""
     if not CURRENT_USER:
         print("Сначала выполните login")
         return
@@ -62,7 +62,7 @@ def cmd_buy_simple(currency: str, amount: float):
 
 
 def cmd_sell_simple(currency: str, amount: float):
-    """Продажа валюты (упрощенная версия)"""
+    """Продажа валюты"""
     if not CURRENT_USER:
         print("Сначала выполните login")
         return
@@ -73,7 +73,7 @@ def cmd_sell_simple(currency: str, amount: float):
 
 
 def cmd_get_rate_simple(from_currency: str, to_currency: str):
-    """Получить курс валюты (упрощенная версия)"""
+    """Получить курс валюты"""
     try:
         rate, updated_at = get_rate(from_currency, to_currency)
         print(f"Курс {from_currency}→{to_currency}: {rate} (обновлено: {updated_at})")
@@ -84,7 +84,7 @@ def cmd_get_rate_simple(from_currency: str, to_currency: str):
 
 
 def cmd_update_rates_simple():
-    """Обновить курсы валют (упрощенная версия)"""
+    """Обновить курсы валют """
     try:
         updater = RatesUpdater()
         total = updater.run_update()
@@ -191,6 +191,7 @@ def run_interactive_cli():
             break
         except Exception as e:
             print(f"Ошибка: {e}")
+
 
 
 
