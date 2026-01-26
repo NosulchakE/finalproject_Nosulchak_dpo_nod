@@ -30,7 +30,7 @@ class RatesUpdater:
             fresh_rates = self.api_client.get_rates()
             
             if not fresh_rates:
-                print("⚠️ Не получены данные от API")
+                print(" Не получены данные от API")
                 return 0
             
             # Обновляем локальный кэш (rates.json)
@@ -39,11 +39,11 @@ class RatesUpdater:
             # Сохраняем исторические данные (exchange_rates.json)
             self._save_historical_data(fresh_rates)
             
-            print(f"✅ Обновлено {updated_count} курсов валют")
+            print(f" Обновлено {updated_count} курсов валют")
             return updated_count
             
         except Exception as e:
-            print(f"❌ Ошибка при обновлении курсов: {e}")
+            print(f" Ошибка при обновлении курсов: {e}")
             raise ApiRequestError(f"Ошибка API: {e}")
     
     def _update_rates_cache(self, fresh_rates: Dict[str, Any]) -> int:
@@ -98,7 +98,8 @@ class RatesUpdater:
         try:
             self.storage.save_rates(fresh_rates)
         except Exception as e:
-            print(f"⚠️ Не удалось сохранить исторические данные: {e}")
+            print(f" Не удалось сохранить исторические данные: {e}")
+
 
 
 
