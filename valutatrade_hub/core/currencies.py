@@ -4,7 +4,7 @@ from typing import Dict
 from .exceptions import CurrencyNotFoundError
 
 
-# === Абстрактный базовый класс ===
+# Абстрактный базовый класс 
 @dataclass
 class Currency(ABC):
     """Абстрактный класс валюты"""
@@ -23,7 +23,7 @@ class Currency(ABC):
         pass
 
 
-# === Наследники ===
+# Наследники 
 @dataclass
 class FiatCurrency(Currency):
     issuing_country: str
@@ -41,7 +41,7 @@ class CryptoCurrency(Currency):
         return f"[CRYPTO] {self.code} — {self.name} (Algo: {self.algorithm}, MCAP: {self.market_cap:.2e})"
 
 
-# === Реестр валют ===
+# Реестр валют 
 _currency_registry: Dict[str, Currency] = {
     "USD": FiatCurrency(name="US Dollar", code="USD", issuing_country="United States"),
     "EUR": FiatCurrency(name="Euro", code="EUR", issuing_country="Eurozone"),
@@ -56,3 +56,4 @@ def get_currency(code: str) -> Currency:
     if code not in _currency_registry:
         raise CurrencyNotFoundError(code)
     return _currency_registry[code]
+
