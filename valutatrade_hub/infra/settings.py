@@ -13,12 +13,13 @@ class SettingsLoader:
             cls._instance.USERS_FILE = os.path.join(cls._instance.DATA_DIR, "users.json")
             cls._instance.PORTFOLIOS_FILE = os.path.join(cls._instance.DATA_DIR, "portfolios.json")
             
-            # Больше не дублируем настройки парсера - они в ParserConfig
+            
 
         return cls._instance
 
     def get(self, key, default=None):
         return getattr(self, key, default)
+
 
 
 
