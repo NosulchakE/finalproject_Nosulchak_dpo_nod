@@ -168,12 +168,21 @@ def sell_currency(user_id: int, currency: str, amount: float):
 
 # Курсы
 def get_rate(from_currency: str, to_currency: str):
+    from valutatrade_hub.parser_service.updater import RatesUpdater
     data = _load_json(RATES_FILE)
+    
     pair_key = f"{from_currency.upper()}_{to_currency.upper()}"
     pair = data.get("pairs", {}).get(pair_key)
+    
     if not pair:
-        raise CurrencyNotFoundError(f"Курс для {pair_key} не найден")
-    return pair["rate"], pair["updated_at"]
+        print(f"Курс {pair_key} не найден, обновляем...")
+        updater = RatesUpdater()
+        all_rates = updater.run_update()
+        pair = all_rates.get(pair_key)
+        if pair is None:
+            raise CurrencyNotFoundError(f"Курс {pair_key} недоступен")
+    
+    return pair, data.get("last_refresh")
 
 def update_rates(source=None):
     from valutatrade_hub.parser_service.updater import RatesUpdater
@@ -185,6 +194,7 @@ def get_current_user():
     """Получить текущего пользователя (для совместимости с декораторами)"""
     from valutatrade_hub.cli.interface import CURRENT_USER
     return CURRENT_USER
+
 
 
 
