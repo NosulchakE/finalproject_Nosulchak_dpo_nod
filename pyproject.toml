@@ -1,27 +1,33 @@
-[tool.poetry]
+[project]
 name = "valutatrade-hub"
 version = "0.1.0"
-description = "ValutaTrade Hub — учебный CLI-проект для торговли валютами с логированием и API-курсами."
-authors = ["Your Name <you@example.com>"]
+description = "ValutaTrade Hub -- учебный CLI-проект для торговли валютами с логированием и API-курсами."
+authors = [
+    { name = "Your Name", email = "you@example.com" }
+]
 readme = "README.md"
-packages = [{ include = "valutatrade_hub" }]
 
-[tool.poetry.dependencies]
+[project.dependencies]
 python = "^3.10"
 requests = "^2.32.3"
 prettytable = "^3.10.0"
 python-dotenv = "^1.0.1"
 
-[tool.poetry.group.dev.dependencies]
+[project.optional-dependencies.dev]
 ruff = "^0.6.8"
 pytest = "^8.3.3"
 
-[tool.poetry.scripts]
+[project.scripts]
 project = "main:main"
+
+[tool.poetry]
+packages = [{ include = "valutatrade_hub" }]
+# (опция packages временно остаётся в tool.poetry, если требуется для poetry)
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
 
 
 
