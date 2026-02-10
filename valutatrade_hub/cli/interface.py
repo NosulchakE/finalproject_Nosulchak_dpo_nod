@@ -8,24 +8,36 @@ logger = logging.getLogger("CLI")
 logger.setLevel(logging.INFO)
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.INFO)
+
 formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
 console_handler.setFormatter(formatter)
-logger.addHandler(console_handler)
+
+if not logger.handlers:
+    logger.addHandler(console_handler)
 
 # Глобальная переменная для текущего пользователя
 CURRENT_USER = None
 
+
+def run_interactive_cli():
+    """
+    Точка входа для запуска CLI из main.py
+    """
+    main_menu()
+
+
 def main_menu():
     logger.info("Добро пожаловать в ValutaTrade Hub!")
+
     while True:
         logger.info("\nДоступные команды:")
-        logger.info("  1. register -  Регистрация")
-        logger.info("  2. login    - Вход")
-        logger.info("  3. portfolio - Показать портфель")
-        logger.info("  4. buy      - Купить валюту")
-        logger.info("  5. sell     - Продать валюту")
-        logger.info("  6. update_rates - Обновить курсы")
-        logger.info("  0. exit     - Выход")
+        logger.info("  1. register       - Регистрация")
+        logger.info("  2. login          - Вход")
+        logger.info("  3. portfolio      - Показать портфель")
+        logger.info("  4. buy            - Купить валюту")
+        logger.info("  5. sell           - Продать валюту")
+        logger.info("  6. update_rates   - Обновить курсы")
+        logger.info("  0. exit           - Выход")
 
         command = input("\nВведите команду: ").strip().lower()
 
@@ -49,11 +61,13 @@ def main_menu():
 
 
 def register():
+    global CURRENT_USER
+
     username = input("Введите имя пользователя: ").strip()
     password = getpass("Введите пароль: ").strip()
+
     try:
         user = usecases.register_user(username, password)
-        global CURRENT_USER
         CURRENT_USER = user
         logger.info(f"Регистрация успешна. Вы вошли как {username}")
     except ValueError as e:
@@ -61,32 +75,35 @@ def register():
 
 
 def login():
+    global CURRENT_USER
+
     username = input("Введите имя пользователя: ").strip()
     password = getpass("Введите пароль: ").strip()
+
     try:
         user = usecases.login_user(username, password)
-        global CURRENT_USER
         CURRENT_USER = user
         logger.info(f"Вы вошли как {username}")
     except ValueError as e:
         logger.warning(str(e))
 
 
-
 def show_portfolio():
     if not CURRENT_USER:
         logger.warning("Команда доступна только для залогиненного пользователя")
         return
-    usecases.show_portfolio(CURRENT_USER["user_id"])
 
+    usecases.show_portfolio(CURRENT_USER["user_id"])
 
 
 def buy_currency():
     if not CURRENT_USER:
         logger.warning("Команда доступна только для залогиненного пользователя")
         return
+
     currency = input("Введите валюту для покупки: ").strip().upper()
     amount_str = input("Введите количество: ").strip()
+
     try:
         amount = float(amount_str)
         usecases.buy_currency(CURRENT_USER["user_id"], currency, amount)
@@ -98,8 +115,10 @@ def sell_currency():
     if not CURRENT_USER:
         logger.warning("Команда доступна только для залогиненного пользователя")
         return
+
     currency = input("Введите валюту для продажи: ").strip().upper()
     amount_str = input("Введите количество: ").strip()
+
     try:
         amount = float(amount_str)
         usecases.sell_currency(CURRENT_USER["user_id"], currency, amount)
@@ -114,9 +133,6 @@ def update_rates():
     except Exception as e:
         logger.error(f"Ошибка при обновлении курсов: {e}")
 
-
-if __name__ == "__main__":
-    main_menu()
 
 
 
