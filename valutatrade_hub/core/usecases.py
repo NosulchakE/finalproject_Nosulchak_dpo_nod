@@ -46,19 +46,25 @@ def load_users():
 
 def save_users(users):
     _save_json(USERS_FILE, users)
+    
 
 
 def register_user(username: str, password: str) -> dict:
     users = load_users()
+
     if any(u["username"] == username for u in users):
         raise ValueError("Пользователь с таким именем уже существует")
 
     user_ids = [int(u["user_id"]) for u in users] if users else [0]
     user_id = max(user_ids) + 1
 
-    password_hash = User.hash_password(password)
-    user = {"user_id": user_id, "username": username, "password_hash": password_hash}
-    users.append(user)
+    # Создаем объект пользователя
+    user_obj = User(user_id=user_id, username=username)
+    user_obj.change_password(password)
+
+    # Сохраняем в JSON
+    user_dict = user_obj.to_dict()
+    users.append(user_dict)
     save_users(users)
 
     # Создаем портфель с начальным балансом
@@ -66,23 +72,32 @@ def register_user(username: str, password: str) -> dict:
     portfolios.append({
         "user_id": user_id,
         "wallets": [
-            {"currency": "USD", "balance": 10000.0}  # начальный баланс
+            {"currency": "USD", "balance": 10000.0}
         ]
     })
     _save_json(PORTFOLIOS_FILE, portfolios)
 
     logger.info(f"Пользователь '{username}' зарегистрирован с user_id={user_id}")
-    return user
+    return user_dict
+
+
 
 
 def login_user(username: str, password: str) -> dict:
     users = load_users()
-    user = next((u for u in users if u["username"] == username), None)
-    password_hash = User.hash_password(password)
-    if not user or user["password_hash"] != password_hash:
+
+    user_data = next((u for u in users if u["username"] == username), None)
+    if not user_data:
         raise ValueError("Неверный логин или пароль")
+
+    # Восстанавливаем объект
+    user_obj = User.from_dict(user_data)
+
+    if not user_obj.verify_password(password):
+        raise ValueError("Неверный логин или пароль")
+
     logger.info(f"Пользователь '{username}' успешно вошел")
-    return user
+    return user_data
 
 
 # Портфель
@@ -199,6 +214,7 @@ def get_current_user():
     """Для совместимости с декораторами"""
     from valutatrade_hub.cli.interface import CURRENT_USER
     return CURRENT_USER
+
 
 
 
