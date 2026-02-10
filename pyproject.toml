@@ -13,20 +13,23 @@ dependencies = [
     "python-dotenv>=1.0.1"
 ]
 
-[project.optional-dependencies.dev]
-ruff = "^0.6.8"
-pytest = "^8.3.3"
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.6.8",
+    "pytest>=8.3.3"
+]
 
 [project.scripts]
 project = "main:main"
 
 [tool.poetry]
 packages = [{ include = "valutatrade_hub" }]
-# (опция packages временно остаётся в tool.poetry, если требуется для poetry)
+# (опция packages временно оставляем в tool.poetry, если требуется для poetry)
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
 
 
 
