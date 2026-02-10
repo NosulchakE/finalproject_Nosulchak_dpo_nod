@@ -1,16 +1,17 @@
 # valutatrade_hub/core/usecases.py
+
 import os
 import json
 import logging
 from valutatrade_hub.core.models import User
 from valutatrade_hub.core.exceptions import InsufficientFundsError, CurrencyNotFoundError, ApiRequestError
-
 from valutatrade_hub.parser_service.updater import RatesUpdater
-from valutatrade_hub.parser_service.api_clients import ExchangeRateAPI
 
-# Настройка логирования
-logger = logging.getLogger(__name__)
+# Настройка логирования для Core
+logger = logging.getLogger("valutatrade_hub.core.usecases")
 logger.setLevel(logging.INFO)
+logger.propagate = False
+
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.INFO)
 formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
@@ -20,15 +21,13 @@ logger.addHandler(console_handler)
 
 USERS_FILE = "data/users.json"
 PORTFOLIOS_FILE = "data/portfolios.json"
-RATES_FILE = "data/rates.json"
+RATES_FILE = "data/rates.json" 
 
 
 # Общие функции для JSON
 def _load_json(file_path):
     if not os.path.exists(file_path):
-        if file_path.endswith("rates.json"):
-            return {"pairs": {}, "last_refresh": None}
-        return []
+        return {"pairs": {}, "last_refresh": None} if file_path.endswith("rates.json") else []
     with open(file_path, "r", encoding="utf-8") as f:
         return json.load(f)
 
@@ -39,65 +38,58 @@ def _save_json(file_path, data):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
-# Пользователи
 def load_users():
     return _load_json(USERS_FILE)
 
 
 def save_users(users):
     _save_json(USERS_FILE, users)
-    
 
 
 def register_user(username: str, password: str) -> dict:
     users = load_users()
-
     if any(u["username"] == username for u in users):
         raise ValueError("Пользователь с таким именем уже существует")
 
     user_ids = [int(u["user_id"]) for u in users] if users else [0]
     user_id = max(user_ids) + 1
 
-    # Создаем объект пользователя
-    user_obj = User(user_id=user_id, username=username)
-    user_obj.change_password(password)
+    user_obj = User(user_id, username, password)
+    user = {
+        "user_id": user_id,
+        "username": username,
+        "salt": user_obj._salt,
+        "password_hash": user_obj._hashed_password
+    }
 
-    # Сохраняем в JSON
-    user_dict = user_obj.to_dict()
-    users.append(user_dict)
+    users.append(user)
     save_users(users)
 
     # Создаем портфель с начальным балансом
     portfolios = _load_json(PORTFOLIOS_FILE)
     portfolios.append({
         "user_id": user_id,
-        "wallets": [
-            {"currency": "USD", "balance": 10000.0}
-        ]
+        "wallets": [{"currency": "USD", "balance": 10000.0}]
     })
     _save_json(PORTFOLIOS_FILE, portfolios)
 
     logger.info(f"Пользователь '{username}' зарегистрирован с user_id={user_id}")
-    return user_dict
-
+    return user
 
 
 
 def login_user(username: str, password: str) -> dict:
     users = load_users()
-
-    user_data = next((u for u in users if u["username"] == username), None)
-    if not user_data:
+    user = next((u for u in users if u["username"] == username), None)
+    if not user:
         raise ValueError("Неверный логин или пароль")
 
-    # Восстанавливаем объект
-    user_obj = User.from_dict(user_data)
-
-    if not user_obj.verify_password(password):
+    user_obj = User(user["user_id"], username, password)
+    if user_obj._hashed_password != user["password_hash"] or user_obj._salt != user["salt"]:
         raise ValueError("Неверный логин или пароль")
 
     logger.info(f"Пользователь '{username}' успешно вошел")
-    return user_data
+    return user
 
 
 # Портфель
@@ -205,6 +197,8 @@ def get_rate(from_currency: str, to_currency: str):
     return pair["rate"], pair["updated_at"]
 
 
+
+
 def update_rates(source=None):
     updater = RatesUpdater(source=source)
     return updater.run_update()
@@ -214,6 +208,7 @@ def get_current_user():
     """Для совместимости с декораторами"""
     from valutatrade_hub.cli.interface import CURRENT_USER
     return CURRENT_USER
+
 
 
 
