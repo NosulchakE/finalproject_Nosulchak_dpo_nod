@@ -2,18 +2,22 @@
 import logging
 from getpass import getpass
 from valutatrade_hub.core import usecases
+from valutatrade_hub.core.exceptions import (
+    InsufficientFundsError,
+    CurrencyNotFoundError,
+    ApiRequestError
+)
 
-# Настройка логирования для CLI
+# Настройка логирования для CLI и не только, убираем задвоение
 logger = logging.getLogger("CLI")
 logger.setLevel(logging.INFO)
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
-
-formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
-console_handler.setFormatter(formatter)
-
 if not logger.handlers:
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+    console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
+
 
 # Глобальная переменная для текущего пользователя
 CURRENT_USER = None
@@ -93,7 +97,10 @@ def show_portfolio():
         logger.warning("Команда доступна только для залогиненного пользователя")
         return
 
-    usecases.show_portfolio(CURRENT_USER["user_id"])
+    try:
+        usecases.show_portfolio(CURRENT_USER["user_id"])
+    except Exception as e:
+        logger.error(f"Ошибка отображения портфеля: {e}")
 
 
 def buy_currency():
@@ -108,7 +115,16 @@ def buy_currency():
         amount = float(amount_str)
         usecases.buy_currency(CURRENT_USER["user_id"], currency, amount)
     except ValueError as e:
-        logger.warning(f"Ошибка: {e}")
+        logger.warning(f"Ошибка ввода: {e}")
+    except InsufficientFundsError as e:
+        logger.warning(f"Недостаточно средств: {e}")
+    except CurrencyNotFoundError as e:
+        logger.warning(f"Ошибка курса: {e}")
+    except ApiRequestError as e:
+        logger.warning(f"Ошибка API: {e}")
+    except Exception as e:
+        logger.error(f"Неожиданная ошибка при покупке валюты: {e}")
+
 
 
 def sell_currency():
@@ -123,7 +139,13 @@ def sell_currency():
         amount = float(amount_str)
         usecases.sell_currency(CURRENT_USER["user_id"], currency, amount)
     except ValueError as e:
-        logger.warning(f"Ошибка: {e}")
+        logger.warning(f"Ошибка ввода: {e}")
+    except InsufficientFundsError as e:
+        logger.warning(f"Недостаточно средств: {e}")
+    except CurrencyNotFoundError as e:
+        logger.warning(f"Ошибка курса: {e}")
+    except ApiRequestError as e:
+        logger.warning(f"Ошибка API: {e}")
 
 
 def update_rates():
@@ -132,6 +154,7 @@ def update_rates():
         logger.info(f"Обновлено {updated_count} курсов валют")
     except Exception as e:
         logger.error(f"Ошибка при обновлении курсов: {e}")
+
 
 
 
