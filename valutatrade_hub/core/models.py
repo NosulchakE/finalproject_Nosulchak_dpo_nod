@@ -3,36 +3,76 @@ import hashlib, secrets, datetime
 class User:
     """Пользователь системы"""
 
-    def __init__(self, user_id, username, password):
-        self._user_id = user_id
+    def __init__(
+        self,
+        user_id: int,
+        username: str,
+        password_hash: str | None = None,
+        salt: str | None = None,
+        registration_date: str | None = None,
+    ):
         if not username:
-            raise ValueError("Имя не может быть пустым")
+            raise ValueError("Имя пользователя не может быть пустым")
+
+        self._user_id = user_id
         self._username = username
+        self._salt = salt
+        self._password_hash = password_hash
+        self._registration_date = (
+            registration_date
+            if registration_date
+            else datetime.datetime.now().isoformat()
+        )
 
-        # генерируем соль, чтобы одинаковые пароли не выглядели одинаково
+    # Пароли
+
+    def change_password(self, new_password: str) -> None:
+        if len(new_password) < 4:
+            raise ValueError("Пароль слишком короткий")
+
         self._salt = secrets.token_hex(8)
-        self._hashed_password = hashlib.sha256((password + self._salt).encode()).hexdigest()
+        self._password_hash = hashlib.sha256(
+            (new_password + self._salt).encode()
+        ).hexdigest()
 
-        self._registration_date = datetime.datetime.now()
+    def verify_password(self, password: str) -> bool:
+        if not self._salt or not self._password_hash:
+            return False
 
-    def get_user_info(self):
-        # возвращаем информацию о пользователе без пароля
+        return self._password_hash == hashlib.sha256(
+            (password + self._salt).encode()
+        ).hexdigest()
+
+    #  Сериализация
+
+    def to_dict(self) -> dict:
         return {
             "user_id": self._user_id,
             "username": self._username,
-            "registration_date": self._registration_date.isoformat()
+            "password_hash": self._password_hash,
+            "salt": self._salt,
+            "registration_date": self._registration_date,
         }
 
-    def change_password(self, new_password):
-        if len(new_password) < 4:
-            raise ValueError("Пароль слишком короткий")
-        # меняем пароль, новая соль для каждого изменения (ТЗ??)
-        self._salt = secrets.token_hex(8)
-        self._hashed_password = hashlib.sha256((new_password + self._salt).encode()).hexdigest()
+    @classmethod
+    def from_dict(cls, data: dict) -> "User":
+        return cls(
+            user_id=data["user_id"],
+            username=data["username"],
+            password_hash=data.get("password_hash"),
+            salt=data.get("salt"),
+            registration_date=data.get("registration_date"),
+        )
 
-    def verify_password(self, password):
-        return self._hashed_password == hashlib.sha256((password + self._salt).encode()).hexdigest()
+    #  Геттеры как в ТЗ
 
+    @property
+    def user_id(self):
+        return self._user_id
+
+    @property
+    def username(self):
+        return self._username
 
 
 class Wallet:
@@ -80,6 +120,7 @@ class Portfolio:
             rate = rates.get(code, {}).get(base_currency, 1.0)
             total += wallet.balance * rate
         return total
+
 
 
 
