@@ -1,4 +1,8 @@
-import hashlib, secrets, datetime
+import hashlib
+import secrets
+from datetime import datetime
+from copy import deepcopy
+
 
 class User:
     """Пользователь системы"""
@@ -7,9 +11,9 @@ class User:
         self,
         user_id: int,
         username: str,
-        password_hash: str | None = None,
+        hashed_password: str | None = None,
         salt: str | None = None,
-        registration_date: str | None = None,
+        registration_date: datetime | None = None,
     ):
         if not username:
             raise ValueError("Имя пользователя не может быть пустым")
@@ -17,41 +21,46 @@ class User:
         self._user_id = user_id
         self._username = username
         self._salt = salt
-        self._password_hash = password_hash
-        self._registration_date = (
-            registration_date
-            if registration_date
-            else datetime.datetime.now().isoformat()
-        )
+        self._hashed_password = hashed_password
+        self._registration_date = registration_date or datetime.now()
 
-    # Пароли
-
+    # пароли
     def change_password(self, new_password: str) -> None:
         if len(new_password) < 4:
-            raise ValueError("Пароль слишком короткий")
+            raise ValueError("Пароль должен быть не короче 4 символов")
 
         self._salt = secrets.token_hex(8)
-        self._password_hash = hashlib.sha256(
+        self._hashed_password = hashlib.sha256(
             (new_password + self._salt).encode()
         ).hexdigest()
 
     def verify_password(self, password: str) -> bool:
-        if not self._salt or not self._password_hash:
+        if not self._salt or not self._hashed_password:
             return False
 
-        return self._password_hash == hashlib.sha256(
+        hashed = hashlib.sha256(
             (password + self._salt).encode()
         ).hexdigest()
 
-    #  Сериализация
+        return hashed == self._hashed_password
 
+    # информация
+
+    def get_user_info(self) -> dict:
+        return {
+            "user_id": self._user_id,
+            "username": self._username,
+            "registration_date": self._registration_date.isoformat(),
+        }
+
+    # сериализация
     def to_dict(self) -> dict:
         return {
             "user_id": self._user_id,
             "username": self._username,
-            "password_hash": self._password_hash,
+            "hashed_password": self._hashed_password,
             "salt": self._salt,
-            "registration_date": self._registration_date,
+            "registration_date": self._registration_date.isoformat(),
         }
 
     @classmethod
@@ -59,12 +68,14 @@ class User:
         return cls(
             user_id=data["user_id"],
             username=data["username"],
-            password_hash=data.get("password_hash"),
+            hashed_password=data.get("hashed_password"),
             salt=data.get("salt"),
-            registration_date=data.get("registration_date"),
+            registration_date=datetime.fromisoformat(
+                data["registration_date"]
+            ) if data.get("registration_date") else None,
         )
 
-    #  Геттеры как в ТЗ
+    # Геттеры / Сеттеры 
 
     @property
     def user_id(self):
@@ -74,52 +85,124 @@ class User:
     def username(self):
         return self._username
 
+    @username.setter
+    def username(self, value: str):
+        if not value:
+            raise ValueError("Имя пользователя не может быть пустым")
+        self._username = value
+
+    @property
+    def registration_date(self):
+        return self._registration_date
+
+
+# __________________
 
 class Wallet:
-    def __init__(self, currency_code, balance=0.0):
+    """Кошелёк для одной валюты"""
+
+    def __init__(self, currency_code: str, balance: float = 0.0):
         if not currency_code:
             raise ValueError("Код валюты не может быть пустым")
+
         self.currency_code = currency_code.upper()
-        self._balance = balance
+        self.balance = balance  # используем setter
 
-    def deposit(self, amount):
-        if amount <= 0:
-            raise ValueError("Сумма должна быть > 0")
-        self._balance += amount
+    def deposit(self, amount: float) -> None:
+        if not isinstance(amount, (int, float)) or amount <= 0:
+            raise ValueError("'amount' должен быть положительным числом")
 
-    def withdraw(self, amount):
-        if amount <= 0:
-            raise ValueError("Сумма должна быть >  0")
+        self._balance += float(amount)
+
+    def withdraw(self, amount: float) -> None:
+        if not isinstance(amount, (int, float)) or amount <= 0:
+            raise ValueError("'amount' должен быть положительным числом")
+
         if amount > self._balance:
-            raise ValueError(f"Недостаточно средств: {self._balance}")
-        self._balance -= amount
+            raise ValueError(
+                f"Недостаточно средств: доступно {self._balance} {self.currency_code}"
+            )
+
+        self._balance -= float(amount)
+
+    def get_balance_info(self) -> str:
+        return f"{self.currency_code}: {self._balance:.4f}"
 
     @property
     def balance(self):
         return self._balance
 
+    @balance.setter
+    def balance(self, value: float):
+        if not isinstance(value, (int, float)):
+            raise ValueError("Баланс должен быть числом")
+
+        if value < 0:
+            raise ValueError("Баланс не может быть отрицательным")
+
+        self._balance = float(value)
+
+
+# _______________
 
 
 class Portfolio:
-    def __init__(self, user_id):
-        self._user_id = user_id
-        self._wallets = {}  # словарь currency_code -Wallet
+    """Портфель пользователя"""
 
-    def add_currency(self, currency_code):
+    def __init__(self, user_id: int):
+        self._user_id = user_id
+        self._wallets: dict[str, Wallet] = {}
+
+    def add_currency(self, currency_code: str) -> None:
+        if not currency_code:
+            raise ValueError("Код валюты не может быть пустым")
+
+        currency_code = currency_code.upper()
+
         if currency_code in self._wallets:
-            print(f"Кошелек {currency_code} уже есть")
-            return
+            raise ValueError(f"Кошелек '{currency_code}' уже существует")
+
         self._wallets[currency_code] = Wallet(currency_code)
 
-    def get_wallet(self, currency_code):
-        return self._wallets.get(currency_code)
+    def get_wallet(self, currency_code: str) -> Wallet | None:
+        return self._wallets.get(currency_code.upper())
 
-    def get_total_value(self, rates, base_currency="USD"):
+    def get_total_value(self, rates: dict, base_currency: str = "USD") -> float:
+        """
+        rates ожидается в формате:
+        {
+            "pairs": {
+                "BTC_USD": { "rate": 59337.21 },
+                ...
+            }
+        }
+        """
         total = 0.0
+
+        pairs = rates.get("pairs", {})
+
         for code, wallet in self._wallets.items():
-            rate = rates.get(code, {}).get(base_currency, 1.0)
-            total += wallet.balance * rate
+            if code == base_currency:
+                total += wallet.balance
+                continue
+
+            pair_key = f"{code}_{base_currency}"
+            rate_info = pairs.get(pair_key)
+
+            if rate_info:
+                rate = rate_info["rate"]
+                total += wallet.balance * rate
+
         return total
+
+    @property
+    def user_id(self):
+        return self._user_id
+
+    @property
+    def wallets(self):
+        return deepcopy(self._wallets)
+
 
 
 
