@@ -2,7 +2,7 @@ import hashlib
 import secrets
 from datetime import datetime
 from copy import deepcopy
-
+from .exceptions import InsufficientFundsError
 
 class User:
     """Пользователь системы"""
@@ -119,8 +119,10 @@ class Wallet:
             raise ValueError("'amount' должен быть положительным числом")
 
         if amount > self._balance:
-            raise ValueError(
-                f"Недостаточно средств: доступно {self._balance} {self.currency_code}"
+            raise InsufficientFundsError(
+                available=self._balance,
+                required=amount,
+                code=self.currency_code
             )
 
         self._balance -= float(amount)
@@ -202,6 +204,7 @@ class Portfolio:
     @property
     def wallets(self):
         return deepcopy(self._wallets)
+
 
 
 
