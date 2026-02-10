@@ -7,7 +7,7 @@ from valutatrade_hub.core.exceptions import InsufficientFundsError, CurrencyNotF
 USERS_FILE = "data/users.json"
 PORTFOLIOS_FILE = "data/portfolios.json"
 RATES_FILE = "data/rates.json"  
-# Общие функции для JSON
+# Общие функции для базы из JSON, читаем файлы 
 def _load_json(file_path):
     if not os.path.exists(file_path):
         if file_path.endswith("rates.json"):
@@ -21,7 +21,7 @@ def _save_json(file_path, data):
     with open(file_path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
-# Пользователи
+# извлекаем нужную информацию по пользователям
 def load_users():
     return _load_json(USERS_FILE)
 
@@ -33,17 +33,17 @@ def register_user(username: str, password: str) -> dict:
     if any(u["username"] == username for u in users):
         raise ValueError("Пользователь с таким именем уже существует")
     
-    # Правильная генерация ID
+    # генерация ID
     user_ids = [int(u["user_id"]) for u in users] if users else [0]
     user_id = max(user_ids) + 1
     
-    # Хэширование пароля
+    # хэширование пароля
     password_hash = User.hash_password(password)
     user = {"user_id": user_id, "username": username, "password_hash": password_hash}
     users.append(user)
     save_users(users)
 
-    # Создаем портфель с начальным балансом
+    # Создаем портфель с начальным баллансом
     portfolios = _load_json(PORTFOLIOS_FILE)
     portfolios.append({
         "user_id": user_id, 
@@ -63,7 +63,7 @@ def login_user(username: str, password: str) -> dict:
         raise ValueError("Неверный логин или пароль")
     return user
 
-# Портфель
+# показываем портфель пользователя
 def show_portfolio(user_id: int, base_currency="USD"):
     portfolios = _load_json(PORTFOLIOS_FILE)
     portfolio = next((p for p in portfolios if p["user_id"] == user_id), None)
@@ -104,7 +104,7 @@ def buy_currency(user_id: int, currency: str, amount: float):
         portfolio = {"user_id": user_id, "wallets": []}
         portfolios.append(portfolio)
     
-    # Находим или создаем кошелек для покупаемой валюты
+    # находим или создаем кошелек для покупаемой валюты
     target_wallet = next((w for w in portfolio["wallets"] if w["currency"] == currency), None)
     if not target_wallet:
         target_wallet = {"currency": currency, "balance": 0.0}
@@ -125,7 +125,7 @@ def buy_currency(user_id: int, currency: str, amount: float):
     if usd_wallet["balance"] < cost_usd:
         raise InsufficientFundsError(f"Недостаточно USD. Нужно: {cost_usd:.2f}, доступно: {usd_wallet['balance']:.2f}")
     
-    # Выполняем операцию
+    # считаем конечный балланс
     usd_wallet["balance"] -= cost_usd
     target_wallet["balance"] += amount
     
@@ -152,14 +152,14 @@ def sell_currency(user_id: int, currency: str, amount: float):
         usd_wallet = {"currency": "USD", "balance": 0.0}
         portfolio["wallets"].append(usd_wallet)
     
-    # Получаем курс и рассчитываем выручку
+    # Получаем курс и рассчитываем выручку в долларах
     try:
         rate, _ = get_rate(currency, "USD")  # Сколько USD получим за 1 единицу валюты
         revenue_usd = amount * rate
     except (CurrencyNotFoundError, ApiRequestError) as e:
         raise CurrencyNotFoundError(f"Не удалось получить курс для {currency}: {e}")
     
-    # Выполняем операцию
+    # получаем балланс
     source_wallet["balance"] -= amount
     usd_wallet["balance"] += revenue_usd
     
@@ -185,6 +185,7 @@ def get_current_user():
     """Получить текущего пользователя (для совместимости с декораторами)"""
     from valutatrade_hub.cli.interface import CURRENT_USER
     return CURRENT_USER
+
 
 
 
