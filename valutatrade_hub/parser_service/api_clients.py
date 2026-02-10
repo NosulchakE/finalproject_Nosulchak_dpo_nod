@@ -1,137 +1,98 @@
 # valutatrade_hub/parser_service/api_clients.py
+from abc import ABC, abstractmethod
+from typing import Dict
 import requests
-from typing import Dict
-
 from .config import ParserConfig
+from valutatrade_hub.core.exceptions import ApiRequestError
 
+CRYPTO_ID_MAP = {
+    "BTC": "bitcoin",
+    "ETH": "ethereum",
+    "SOL": "solana"
+}
+# создаем абстрактный базовый класс в соответствии с ТЗ
+class BaseApiClient(ABC):
+    """Абстрактный базовый класс для всех API клиентов."""
 
-class ExchangeRateAPI:
-    """Клиент для работы с ExchangeRate-API"""
-    
+    @abstractmethod
+    def fetch_rates(self) -> Dict[str, float]:
+        """Возвращает словарь курсов в формате {'USD_BTC': 59337.21}"""
+        pass
+
+# клиент CoinGecko наследуется из АВС
+class CoinGeckoClient(BaseApiClient):
+    """Клиент для CoinGecko (криптовалюты)"""
+
+    def __init__(self):
+        self.config = ParserConfig()
+        self.timeout = self.config.REQUEST_TIMEOUT
+        self.ids = ','.join(CRYPTO_ID_MAP.values())
+        self.vs_currency = self.config.BASE_CURRENCY.lower()
+        self.url = f"https://api.coingecko.com/api/v3/simple/price?ids={self.ids}&vs_currencies={self.vs_currency}"
+
+    def fetch_rates(self) -> Dict[str, float]:
+        """Получаем курсы криптовалют"""
+        try:
+            response = requests.get(self.url, timeout=self.timeout)
+            response.raise_for_status()
+            data = response.json()
+            rates = {}
+            for code, coingecko_id in CRYPTO_ID_MAP.items():
+                if coingecko_id in data and self.vs_currency in data[coingecko_id]:
+                    key = f"{self.config.BASE_CURRENCY}_{code}"
+                    rates[key] = data[coingecko_id][self.vs_currency]
+            return rates
+        except requests.RequestException as e:
+            print(f"[CoinGecko] Ошибка сети: {e}. Используем заглушку.")
+            return self._mock_rates()
+        except Exception as e:
+            print(f"[CoinGecko] Неожиданная ошибка: {e}. Используем заглушку.")
+            return self._mock_rates()
+
+    def _mock_rates(self) -> Dict[str, float]:
+        """Возвращает тестовые данные"""
+        print("[CoinGecko] Используются тестовые данные")
+        return {f"{self.config.BASE_CURRENCY}_{code}": 100.0 + i*50
+                for i, code in enumerate(CRYPTO_ID_MAP.keys(), 1)}
+
+# клиент ExchangeRate-API наследуется из АВС
+class ExchangeRateApiClient(BaseApiClient):
+    """Клиент для ExchangeRate-API (фиатные валюты)"""
+
     def __init__(self):
         self.config = ParserConfig()
         self.base_url = f"{self.config.EXCHANGERATE_API_URL}/{self.config.EXCHANGERATE_API_KEY}/latest/{self.config.BASE_CURRENCY}"
         self.timeout = self.config.REQUEST_TIMEOUT
-        
-        # Объединяем все поддерживаемые валюты
-        self.supported_currencies = {
-            currency: "Fiat" for currency in self.config.FIAT_CURRENCIES
-        }
-        self.supported_currencies.update({
-            currency: "Crypto" for currency in self.config.CRYPTO_CURRENCIES
-        })
-        self.supported_currencies[self.config.BASE_CURRENCY] = "Base"
-    
-    def get_rates(self) -> Dict[str, float]:
-        """Получаем актуальные курсы валют"""
+
+    def fetch_rates(self) -> Dict[str, float]:
+        """Получаем курсы фиатных валют"""
+        if not self.config.EXCHANGERATE_API_KEY:
+            print("[ExchangeRate] API ключ не задан. Используем заглушку.")
+            return self._mock_rates()
         try:
-            if not self.api_key:
-                print("API ключ не установлен в .env файле")
-                return self._get_mock_rates()
-        
-            print("Запрос к ExchangeRate-API...")
-            print(f" Ключ: {self.api_key[:8]}...{self.api_key[-4:]}")
-        
-            response = requests.get(self.base_url, timeout=self.timeout)
-            print(f" Статус ответа: {response.status_code}")
-        
-            if response.status_code == 403:
-                print(" Ошибка 403: Неверный API ключ")
-                return self._get_mock_rates()
-            elif response.status_code == 429:
-                print(" Ошибка 429: Превышен лимит запросов")
-                return self._get_mock_rates()
-            elif response.status_code != 200:
-                print(f" HTTP ошибка: {response.status_code}")
-                return self._get_mock_rates()
-        
-            response.raise_for_status()
-            data = response.json()
-        
-            if data.get('result') == 'success':
-                rates = data.get('conversion_rates', {})
-                print(f" Получено {len(rates)} курсов от API")
-                return rates
-            else:
-                error_type = data.get('error-type', 'Unknown error')
-                print(f" API ошибка: {error_type}")
-                return self._get_mock_rates()
-            
-        except requests.RequestException as e:
-            print(f" Ошибка сети: {e}")
-            return self._get_mock_rates()
-        except Exception as e:
-            print(f" Неожиданная ошибка: {e}")
-            return self._get_mock_rates()
-    
-    def _get_mock_rates(self) -> Dict[str, float]:
-        """Возвращает тестовые данные для разработки"""
-        print(" Используются тестовые данные")
-        return {
-            currency: 1.0 if currency == self.config.BASE_CURRENCY else 0.1 * i
-            for i, currency in enumerate(self.config.FIAT_CURRENCIES + self.config.CRYPTO_CURRENCIES, 1)
-        }# valutatrade_hub/parser_service/api_clients.py
-from typing import Dict
-
-
-
-class ExchangeRateAPI:
-    """Клиент для работы с ExchangeRate-API"""
-    
-    def __init__(self):
-        self.config = ParserConfig()
-        self.base_url = f"{self.config.EXCHANGERATE_API_URL}/{self.config.EXCHANGERATE_API_KEY}/latest/{self.config.BASE_CURRENCY}"
-        self.timeout = self.config.REQUEST_TIMEOUT
-        
-        # Объединяем все поддерживаемые валюты
-        self.supported_currencies = {
-            currency: "Fiat" for currency in self.config.FIAT_CURRENCIES
-        }
-        self.supported_currencies.update({
-            currency: "Crypto" for currency in self.config.CRYPTO_CURRENCIES
-        })
-        self.supported_currencies[self.config.BASE_CURRENCY] = "Base"
-    
-    def get_rates(self) -> Dict[str, float]:
-        """
-        Получает актуальные курсы валют относительно USD
-        """
-        try:
-            print(" Запрос к ExchangeRate-API...")
-            
-            # Проверяем наличие API ключа
-            if not self.config.EXCHANGERATE_API_KEY:
-                print(" API ключ не установлен. Используются тестовые данные")
-                return self._get_mock_rates()
-            
             response = requests.get(self.base_url, timeout=self.timeout)
             response.raise_for_status()
             data = response.json()
-            
-            if data.get('result') == 'success':
-                rates = data.get('conversion_rates', {})
-                print(f" Получено {len(rates)} курсов валют от API")
-                return rates
-            else:
-                error_type = data.get('error-type', 'Unknown error')
-                print(f" API ошибка: {error_type}")
-                return self._get_mock_rates()
-            
+            if data.get("result") != "success":
+                raise ApiRequestError(f"Ошибка API: {data.get('error-type', 'Unknown')}")
+            rates = {}
+            for code, rate in data.get("conversion_rates", {}).items():
+                if code != self.config.BASE_CURRENCY:
+                    key = f"{self.config.BASE_CURRENCY}_{code}"
+                    rates[key] = rate
+            return rates
         except requests.RequestException as e:
-            print(f" Ошибка сети: {e}")
-            return self._get_mock_rates()
+            print(f"[ExchangeRate] Ошибка сети: {e}. Используем заглушку.")
+            return self._mock_rates()
         except Exception as e:
-            print(f" Неожиданная ошибка: {e}")
-            return self._get_mock_rates()
-    
-    def _get_mock_rates(self) -> Dict[str, float]:
-        """Возвращает тестовые данные для разработки"""
-        print(" Используются тестовые данные")
-        return {
-            currency: 1.0 if currency == self.config.BASE_CURRENCY else 0.1 * i
-            for i, currency in enumerate(self.config.FIAT_CURRENCIES + self.config.CRYPTO_CURRENCIES, 1)
-        }
+            print(f"[ExchangeRate] Неожиданная ошибка: {e}. Используем заглушку.")
+            return self._mock_rates()
 
+    def _mock_rates(self) -> Dict[str, float]:
+        """Возвращает тестовые данные"""
+        print("[ExchangeRate] Используются тестовые данные")
+        return {f"{self.config.BASE_CURRENCY}_{code}": 0.9 + i*0.1
+                for i, code in enumerate(self.config.FIAT_CURRENCIES, 1)}
 
 
 
