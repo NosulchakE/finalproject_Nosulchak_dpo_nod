@@ -1,22 +1,22 @@
-[project]
+[tool.poetry]
 name = "valutatrade-hub"
 version = "0.1.0"
 description = "ValutaTrade Hub -- учебный CLI-проект для торговли валютами с логированием и API-курсами."
-authors = [{ name = "Your Name", email = "you@example.com" }]
+authors = ["Your Name <you@example.com>"]
 readme = "README.md"
-dependencies = [
-    "requests>=2.32.3",
-    "prettytable>=3.10.0",
-    "python-dotenv>=1.0.1"
-]
+packages = [{ include = "valutatrade_hub" }]
 
-[project.optional-dependencies]
-dev = [
-    "ruff>=0.6.8",
-    "pytest>=8.3.3"
-]
+[tool.poetry.dependencies]
+python = "^3.10"
+requests = "^2.32.3"
+prettytable = "^3.10.0"
+python-dotenv = "^1.0.1"
 
-[project.scripts]
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.6.8"
+pytest = "^8.3.3"
+
+[tool.poetry.scripts]
 project = "main:main"
 
 [build-system]
