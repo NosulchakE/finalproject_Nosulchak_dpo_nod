@@ -1,40 +1,86 @@
-from dataclasses import dataclass
-import hashlib
-import uuid
+import hashlib, secrets, datetime
 
-@dataclass
 class User:
-    username: str
-    password_hash: str
-    user_id: str = None
+    """Пользователь системы"""
 
-    def __post_init__(self):
-        if not self.user_id:
-            self.user_id = str(uuid.uuid4())
+    def __init__(self, user_id, username, password):
+        self._user_id = user_id
+        if not username:
+            raise ValueError("Имя не может быть пустым")
+        self._username = username
 
-    @staticmethod
-    def hash_password(password: str) -> str:
-        return hashlib.sha256(password.encode()).hexdigest()
+        # генерируем соль, чтобы одинаковые пароли не выглядели одинаково
+        self._salt = secrets.token_hex(8)
+        self._hashed_password = hashlib.sha256((password + self._salt).encode()).hexdigest()
 
-    def check_password(self, password: str) -> bool:
-        return self.password_hash == self.hash_password(password)
+        self._registration_date = datetime.datetime.now()
 
-    @classmethod
-    def from_dict(cls, data: dict):
-        return cls(username=data["username"], password_hash=data["password_hash"], user_id=data["user_id"])
+    def get_user_info(self):
+        # возвращаем информацию о пользователе без пароля
+        return {
+            "user_id": self._user_id,
+            "username": self._username,
+            "registration_date": self._registration_date.isoformat()
+        }
 
-    def to_dict(self):
-        return {"username": self.username, "password_hash": self.password_hash, "user_id": self.user_id}
+    def change_password(self, new_password):
+        if len(new_password) < 4:
+            raise ValueError("Пароль слишком короткий")
+        # меняем пароль, новая соль для каждого изменения (ТЗ??)
+        self._salt = secrets.token_hex(8)
+        self._hashed_password = hashlib.sha256((new_password + self._salt).encode()).hexdigest()
 
-@dataclass
+    def verify_password(self, password):
+        return self._hashed_password == hashlib.sha256((password + self._salt).encode()).hexdigest()
+
+
+
 class Wallet:
-    currency: str
-    balance: float = 0.0
+    def __init__(self, currency_code, balance=0.0):
+        if not currency_code:
+            raise ValueError("Код валюты не может быть пустым")
+        self.currency_code = currency_code.upper()
+        self._balance = balance
 
-@dataclass
+    def deposit(self, amount):
+        if amount <= 0:
+            raise ValueError("Сумма должна быть > 0")
+        self._balance += amount
+
+    def withdraw(self, amount):
+        if amount <= 0:
+            raise ValueError("Сумма должна быть >  0")
+        if amount > self._balance:
+            raise ValueError(f"Недостаточно средств: {self._balance}")
+        self._balance -= amount
+
+    @property
+    def balance(self):
+        return self._balance
+
+
+
 class Portfolio:
-    user_id: str
-    wallets: list[Wallet]
+    def __init__(self, user_id):
+        self._user_id = user_id
+        self._wallets = {}  # словарь currency_code -Wallet
+
+    def add_currency(self, currency_code):
+        if currency_code in self._wallets:
+            print(f"Кошелек {currency_code} уже есть")
+            return
+        self._wallets[currency_code] = Wallet(currency_code)
+
+    def get_wallet(self, currency_code):
+        return self._wallets.get(currency_code)
+
+    def get_total_value(self, rates, base_currency="USD"):
+        total = 0.0
+        for code, wallet in self._wallets.items():
+            rate = rates.get(code, {}).get(base_currency, 1.0)
+            total += wallet.balance * rate
+        return total
+
 
 
 
