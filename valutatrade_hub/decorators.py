@@ -1,69 +1,104 @@
+# valutatrade_hub/decorators.py
 import functools
 from typing import Callable
-from valutatrade_hub.logging_config import logger
-from valutatrade_hub.core.usecases import get_current_user
+from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 
-def log_action(action: str, verbose: bool = True):
+def log_action(action: str, verbose: bool = False):
     """
     Декоратор для логирования действий (buy/sell/register/login).
     
     :param action: Название действия (BUY, SELL, REGISTER, LOGIN)
-    :param verbose: Включает контекст результата (например, "было->стало")
+    :param verbose: Включает контекст результата (например, "было->стало") (требование ТЗ!!)
     """
     def decorator(func: Callable):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            user = None
+            # Собираем данные для лога
+            log_data = {
+                "timestamp": datetime.now().isoformat(),
+                "action": action,
+                "username": "unknown",
+                "user_id": "unknown",
+                "result": "OK"
+            }
+            
             try:
-                try:
-                    user = get_current_user()
-                    username = user.username
-                    user_id = user.user_id
-                except Exception:
-                    username = kwargs.get("username", "N/A")
-                    user_id = "N/A"
-
-                result = "OK"
-                value_before = kwargs.get("value_before", None)
-
-                res = func(*args, **kwargs)
-
-                value_after = res if verbose else None
-
-                log_parts = [
-                    f"action={action}",
-                    f"user='{username}'",
-                ]
-
-                if "currency_code" in kwargs:
-                    log_parts.append(f"currency='{kwargs['currency_code']}'")
-                if "amount" in kwargs:
-                    log_parts.append(f"amount={kwargs['amount']}")
-                if "rate" in kwargs:
-                    log_parts.append(f"rate={kwargs['rate']}")
-                if "base" in kwargs:
-                    log_parts.append(f"base='{kwargs['base']}'")
-
-                log_parts.append(f"result={result}")
-                if verbose and value_before is not None and value_after is not None:
-                    log_parts.append(f"context='{value_before}→{value_after}'")
-
-                logger.info(" ".join(log_parts))
-                return res
-
+                # Извлекаем информацию из аргументов
+                # Для register/login: args = (username, password)
+                # Для buy/sell: args = (user_id, currency, amount)
+                
+                if len(args) >= 1:
+                    # Первый аргумент - user_id для buy/sell или username для register
+                    if isinstance(args[0], int):
+                        log_data["user_id"] = args[0]
+                    elif isinstance(args[0], str):
+                        log_data["username"] = args[0]
+                
+                # Второй аргумент - currency для buy/sell или password для register
+                if len(args) >= 2 and isinstance(args[1], str):
+                    if action in ("BUY", "SELL"):
+                        log_data["currency_code"] = args[1]
+                
+                # Третий аргумент - amount для buy/sell
+                if len(args) >= 3:
+                    if action in ("BUY", "SELL"):
+                        log_data["amount"] = args[2]
+                
+                # Выполняем функцию
+                result = func(*args, **kwargs)
+                
+                # Логируем успех
+                _log_action(log_data)
+                return result
+                
             except Exception as e:
-                error_type = type(e).__name__
-                error_message = str(e)
-                log_parts = [
-                    f"action={action}",
-                    f"user='{username}'",
-                    "result=ERROR",
-                    f"error_type={error_type}",
-                    f"error_message='{error_message}'"
-                ]
-                logger.info(" ".join(log_parts))
-                raise  # проброс исключения дальше
-
+                # Логируем ошибку
+                log_data["result"] = "ERROR"
+                log_data["error_type"] = type(e).__name__
+                log_data["error_message"] = str(e)
+                
+                _log_action(log_data)
+                raise  # пробрасываем исключение дальше
+        
         return wrapper
     return decorator
+
+
+def _log_action(log_data: dict):
+    """Вспомогательная функция для логирования в формате строки"""
+    parts = []
+    
+    # Обязательные поля
+    parts.append(f"timestamp={log_data['timestamp']}")
+    parts.append(f"action={log_data['action']}")
+    parts.append(f"username='{log_data['username']}'")
+    parts.append(f"user_id={log_data['user_id']}")
+    
+    # опциональные поля
+    if "currency_code" in log_data:
+        parts.append(f"currency_code='{log_data['currency_code']}'")
+    if "amount" in log_data:
+        parts.append(f"amount={log_data['amount']}")
+    if "rate" in log_data:
+        parts.append(f"rate={log_data['rate']}")
+    if "base" in log_data:
+        parts.append(f"base='{log_data['base']}'")
+    
+    # Результат
+    parts.append(f"result={log_data['result']}")
+    
+    # Ошибки если есть
+    if log_data["result"] == "ERROR":
+        parts.append(f"error_type={log_data['error_type']}")
+        parts.append(f"error_message='{log_data['error_message']}'")
+    
+    # Контекст для verbose режима
+    if "context_before" in log_data and "context_after" in log_data:
+        parts.append(f"context='{log_data['context_before']}→{log_data['context_after']}'")
+    
+    logger.info(" ".join(parts))
+
