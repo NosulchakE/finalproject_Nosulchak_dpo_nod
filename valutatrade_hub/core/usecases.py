@@ -9,10 +9,10 @@ from valutatrade_hub.infra.database import JSONDatabase
 # Убираем локальную настройку логирования, используем централизованную
 logger = logging.getLogger(__name__)
 
-# Используем базу данных вместо прямых вызовов
+# Используем базу 
 _db = JSONDatabase()
 
-
+@log_action("REGISTER")
 def register_user(username: str, password: str) -> dict:
     users = _db.load_users()
     if any(u["username"] == username for u in users):
@@ -43,7 +43,7 @@ def register_user(username: str, password: str) -> dict:
     logger.info(f"Пользователь '{username}' зарегистрирован с user_id={user_id}")
     return user
 
-
+@log_action("LOGIN") 
 def login_user(username: str, password: str) -> dict:
     users = _db.load_users()
     user = next((u for u in users if u["username"] == username), None)
@@ -87,6 +87,8 @@ def show_portfolio(user_id: int, base_currency="USD"):
     logger.info(f"Общая стоимость: {total_value:.2f} {base_currency}")
 
 
+
+@log_action("BUY")
 def buy_currency(user_id: int, currency: str, amount: float):
     if amount <= 0:
         raise ValueError("Сумма должна быть положительной")
@@ -123,7 +125,7 @@ def buy_currency(user_id: int, currency: str, amount: float):
 
 
 
-
+@log_action("SELL")
 def sell_currency(user_id: int, currency: str, amount: float):
     if amount <= 0:
         raise ValueError("Сумма должна быть положительной")
@@ -170,10 +172,7 @@ def update_rates(source=None):
     return updater.run_update()
 
 
-def get_current_user():
-    """Для совместимости с декораторами"""
-    from valutatrade_hub.cli.interface import CURRENT_USER
-    return CURRENT_USER
+
 
 
 
