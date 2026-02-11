@@ -8,11 +8,20 @@
     "wallets": [
       {
         "currency": "USD",
-        "balance": 6391.30
+        "balance": 6391.3
       },
       {
         "currency": "EUR",
         "balance": 450.0
+      }
+    ]
+  },
+  {
+    "user_id": 3,
+    "wallets": [
+      {
+        "currency": "USD",
+        "balance": 10000.0
       }
     ]
   }

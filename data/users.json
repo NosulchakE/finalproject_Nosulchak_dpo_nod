@@ -12,5 +12,12 @@
     "hashed_password": "3f79bb7b435b05321651daefd374cd21b4f7f8b46f0c9ebad5dbf8d4d3c8a74e",
     "salt": "c1d2e3f4a5b6c7d8",
     "registration_date": "2026-02-09T14:32:10.654321"
+  },
+  {
+    "user_id": 3,
+    "username": "Elena",
+    "password_hash": "79fe973d7e16a7b29c8b1cc8c470df3b84738164f56ca1e41c1d6133b110869b",
+    "salt": "caf20a54d4c2b005",
+    "registration_date": "2026-02-10T16:28:00.320200"
   }
 ]
