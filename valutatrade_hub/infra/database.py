@@ -21,7 +21,7 @@ class JSONDatabase:
             with open(filepath, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except (json.JSONDecodeError, IOError):
-            # Если файл поврежден, возвращаем значение по умолчанию
+            # если файл поврежден, возвращается значение по умолчанию
             return default if default is not None else {}
     
     def _save_json(self, filename: str, data: Any) -> None:
@@ -61,9 +61,10 @@ class JSONDatabase:
         self._save_json("rates.json", rates)
     
     def load_exchange_rates(self) -> Dict:
-        """Загрузить исторические курсы валют"""
+        """загружаем исторические курсы валют"""
         return self._load_json("exchange_rates.json", {})
     
     def save_exchange_rates(self, exchange_rates: Dict) -> None:
-        """Сохранить исторические курсы валют"""
+        """Сохраняем исторические курсы валют"""
         self._save_json("exchange_rates.json", exchange_rates)
+
