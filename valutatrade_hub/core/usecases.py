@@ -1,5 +1,5 @@
 # valutatrade_hub/core/usecases.py
-
+from valutatrade_hub.decorators import log_action
 import logging
 from valutatrade_hub.core.models import User
 from valutatrade_hub.core.exceptions import InsufficientFundsError, CurrencyNotFoundError, ApiRequestError
@@ -170,6 +170,7 @@ def get_rate(from_currency: str, to_currency: str):
 def update_rates(source=None):
     updater = RatesUpdater(source=source)
     return updater.run_update()
+
 
 
 
