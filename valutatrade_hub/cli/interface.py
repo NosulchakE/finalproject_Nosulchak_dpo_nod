@@ -3,22 +3,20 @@ import logging
 from getpass import getpass
 from valutatrade_hub.core import usecases
 
-# Настройка логирования для CLI
+
+# Используем централизованное логирование 
 logger = logging.getLogger("CLI")
-logger.setLevel(logging.INFO)
-logger.propagate = False  # предотвращаем дублирование сообщений
 
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
-formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
-console_handler.setFormatter(formatter)
-logger.addHandler(console_handler)
-
-# Глобальная переменная для текущего пользователя
+# Глобальная переменная для текущего пользователя 
 CURRENT_USER = None
+
 
 def run_interactive_cli():
     logger.info("Добро пожаловать в ValutaTrade Hub!")
+    
+    # Локальная переменная 
+    current_user = None
+    
     while True:
         logger.info("\nДоступные команды:")
         logger.info("  1. register         - Регистрация")
@@ -33,17 +31,19 @@ def run_interactive_cli():
 
         try:
             if command in ("1", "register"):
-                register()
+                current_user = _register()
+                CURRENT_USER = current_user  # Обновляем глобальную для совместимости
             elif command in ("2", "login"):
-                login()
+                current_user = _login()
+                CURRENT_USER = current_user  # Обновляем глобальную для совместимости
             elif command in ("3", "portfolio"):
-                show_portfolio()
+                _show_portfolio(current_user)
             elif command in ("4", "buy"):
-                buy_currency()
+                _buy_currency(current_user)
             elif command in ("5", "sell"):
-                sell_currency()
+                _sell_currency(current_user)
             elif command in ("6", "update_rates"):
-                update_rates()
+                _update_rates()
             elif command in ("0", "exit"):
                 logger.info("Выход из программы...")
                 break
@@ -53,71 +53,75 @@ def run_interactive_cli():
             logger.error(f"Ошибка при выполнении команды: {e}")
 
 
-def register():
-    global CURRENT_USER
+def _register():
     username = input("Введите имя пользователя: ").strip()
     password = getpass("Введите пароль: ").strip()
     try:
         user = usecases.register_user(username, password)
-        CURRENT_USER = user
         logger.info(f"Регистрация успешна. Вы вошли как {username}")
+        return user
     except ValueError as e:
         logger.warning(str(e))
+        return None
 
 
-def login():
-    global CURRENT_USER
+def _login():
     username = input("Введите имя пользователя: ").strip()
     password = getpass("Введите пароль: ").strip()
     try:
         user = usecases.login_user(username, password)
-        CURRENT_USER = user
         logger.info(f"Вы вошли как {username}")
+        return user
     except ValueError as e:
         logger.warning(str(e))
+        return None
 
 
-def show_portfolio():
-    if not CURRENT_USER:
+def _show_portfolio(current_user):
+    if not current_user:
         logger.warning("Команда доступна только для залогиненного пользователя")
         return
     try:
-        usecases.show_portfolio(CURRENT_USER["user_id"])
+        usecases.show_portfolio(current_user["user_id"])
     except Exception as e:
         logger.error(f"Не удалось показать портфель: {e}")
 
 
-def buy_currency():
-    if not CURRENT_USER:
+def _buy_currency(current_user):
+    if not current_user:
         logger.warning("Команда доступна только для залогиненного пользователя")
         return
+    
     currency = input("Введите валюту для покупки: ").strip().upper()
     amount_str = input("Введите количество: ").strip()
+    
     try:
         amount = float(amount_str)
-        usecases.buy_currency(CURRENT_USER["user_id"], currency, amount)
+        usecases.buy_currency(current_user["user_id"], currency, amount)
     except ValueError as e:
         logger.warning(f"Ошибка ввода: {e}")
     except Exception as e:
         logger.error(f"Не удалось купить валюту: {e}")
 
 
-def sell_currency():
-    if not CURRENT_USER:
+def _sell_currency(current_user):
+    if not current_user:
         logger.warning("Команда доступна только для залогиненного пользователя")
         return
+    
     currency = input("Введите валюту для продажи: ").strip().upper()
     amount_str = input("Введите количество: ").strip()
+    
     try:
         amount = float(amount_str)
-        usecases.sell_currency(CURRENT_USER["user_id"], currency, amount)
+        usecases.sell_currency(current_user["user_id"], currency, amount)
     except ValueError as e:
         logger.warning(f"Ошибка ввода: {e}")
     except Exception as e:
         logger.error(f"Не удалось продать валюту: {e}")
 
 
-def update_rates():
+def _update_rates():
     try:
         updated_count = usecases.update_rates()
         logger.info(f"Обновлено {updated_count} курсов валют")
