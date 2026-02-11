@@ -100,6 +100,18 @@ def buy_currency(user_id: int, currency: str, amount: float):
         portfolio = {"user_id": user_id, "wallets": []}
         portfolios.append(portfolio)
 
+    # ОТДЕЛЬНО ОБРАБАТЫВАЕМ ПОКУПКУ USD
+    if currency.upper() == "USD":
+        usd_wallet = next((w for w in portfolio["wallets"] if w["currency"] == "USD"), None)
+        if not usd_wallet:
+            usd_wallet = {"currency": "USD", "balance": 0.0}
+            portfolio["wallets"].append(usd_wallet)
+        
+        usd_wallet["balance"] += amount
+        _db.save_portfolios(portfolios)
+        logger.info(f"Пополнено {amount:.2f} USD")
+        return
+
     target_wallet = next((w for w in portfolio["wallets"] if w["currency"] == currency), None)
     if not target_wallet:
         target_wallet = {"currency": currency, "balance": 0.0}
@@ -160,6 +172,9 @@ def sell_currency(user_id: int, currency: str, amount: float):
 
 # Курсы
 def get_rate(from_currency: str, to_currency: str):
+    if from_currency.upper() == to_currency.upper():
+        return 1.0, datetime.now().isoformat()  # курс сам к себе= 1
+    
     data = _db.load_rates()
     pair_key = f"{from_currency.upper()}_{to_currency.upper()}"
     pair = data.get("pairs", {}).get(pair_key)
@@ -171,6 +186,7 @@ def get_rate(from_currency: str, to_currency: str):
 def update_rates(source=None):
     updater = RatesUpdater(source=source)
     return updater.run_update()
+
 
 
 
