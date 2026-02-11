@@ -6,14 +6,8 @@ import logging
 from .config import ParserConfig
 from valutatrade_hub.core.exceptions import ApiRequestError
 
-# Настройка логирования
+# Используем централизованное логирование
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
-formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
-console_handler.setFormatter(formatter)
-logger.addHandler(console_handler)
 
 
 class ExchangeRateAPI:
@@ -38,7 +32,7 @@ class ExchangeRateAPI:
                 logger.warning("API ключ не установлен. используются тестовые данные")
                 return self._get_mock_rates()
 
-            logger.info(" Запрос к ExchangeRate-API...")
+            logger.info("Запрос к ExchangeRate-API...")
 
             response = requests.get(self.base_url, timeout=self.timeout)
             if response.status_code == 403:
@@ -56,7 +50,7 @@ class ExchangeRateAPI:
 
             if data.get("result") == "success":
                 rates = data.get("conversion_rates", {})
-                logger.info(f" Получено {len(rates)} курсов валют от API")
+                logger.info(f"Получено {len(rates)} курсов валют от API")
                 return rates
             else:
                 error_type = data.get("error-type", "Unknown error")
@@ -74,7 +68,7 @@ class ExchangeRateAPI:
         """
         Возвращает тестовые данные для разработки
         """
-        logger.info(" Используются тестовые данные для валют")
+        logger.info("Используются тестовые данные для валют")
         return {
             currency: 1.0 if currency == self.config.BASE_CURRENCY else 0.1 * i
             for i, currency in enumerate(self.config.FIAT_CURRENCIES + self.config.CRYPTO_CURRENCIES, 1)
