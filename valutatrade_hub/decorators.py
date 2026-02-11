@@ -4,8 +4,7 @@ from typing import Callable
 from datetime import datetime
 import logging
 
-logger = logging.getLogger(__name__)
-
+logger = logging.getLogger("valutatrade.actions")
 
 def log_action(action: str, verbose: bool = False):
     """
@@ -101,4 +100,5 @@ def _log_action(log_data: dict):
         parts.append(f"context='{log_data['context_before']}→{log_data['context_after']}'")
     
     logger.info(" ".join(parts))
+
 
