@@ -24,6 +24,24 @@ class User:
         self._hashed_password = hashed_password
         self._registration_date = registration_date or datetime.now()
 
+
+    @classmethod
+    def create(cls, username: str, password: str) -> "User":
+        """Создать нового пользователя с хешированием пароля"""
+        if not username:
+            raise ValueError("Имя пользователя не может быть пустым")
+        if len(password) < 4:
+            raise ValueError("Пароль должен быть не короче 4 символов")
+        
+        salt = secrets.token_hex(8)
+        hashed_password = hashlib.sha256((password + salt).encode()).hexdigest()
+        
+        return cls(
+            user_id=0,
+            username=username,
+            hashed_password=hashed_password,
+            salt=salt
+        )
     # пароли
     def change_password(self, new_password: str) -> None:
         if len(new_password) < 4:
@@ -204,6 +222,7 @@ class Portfolio:
     @property
     def wallets(self):
         return deepcopy(self._wallets)
+
 
 
 
