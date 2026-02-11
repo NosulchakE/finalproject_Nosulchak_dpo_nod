@@ -6,7 +6,7 @@ from valutatrade_hub.core.exceptions import InsufficientFundsError, CurrencyNotF
 from valutatrade_hub.parser_service.updater import RatesUpdater
 from valutatrade_hub.infra.database import JSONDatabase
 
-# Убираем локальную настройку логирования, используем централизованную
+# настройка логирования централизованно
 logger = logging.getLogger(__name__)
 
 # Используем базу 
@@ -21,7 +21,8 @@ def register_user(username: str, password: str) -> dict:
     user_ids = [int(u["user_id"]) for u in users] if users else [0]
     user_id = max(user_ids) + 1
 
-    user_obj = User(user_id, username, password)
+    user_obj = User.create(username, password)
+    user_obj._user_id = user_id  # устанавливаем реальный ID
     user = {
         "user_id": user_id,
         "username": username,
@@ -170,6 +171,7 @@ def get_rate(from_currency: str, to_currency: str):
 def update_rates(source=None):
     updater = RatesUpdater(source=source)
     return updater.run_update()
+
 
 
 
