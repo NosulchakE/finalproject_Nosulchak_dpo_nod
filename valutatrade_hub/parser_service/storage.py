@@ -1,52 +1,45 @@
 # valutatrade_hub/parser_service/storage.py
-import json
-from pathlib import Path
 from datetime import datetime, timezone
 from typing import Dict, Any
-
-from .config import ParserConfig
+from valutatrade_hub.infra.database import JSONDatabase  
 
 
 class RatesStorage:
     """Класс для работы с историческими данными курсов"""
     
     def __init__(self):
-        self.config = ParserConfig()
-        self.data_file = Path(self.config.HISTORY_FILE_PATH)
-        self.data_file.parent.mkdir(exist_ok=True)
+        self.db = JSONDatabase()  # ИСПОЛЬЗУЕМ ОБЩУЮ БАЗУ для разделение слоев
     
     def save_rates(self, rates: Dict[str, Any]):
         """
-        Сохраняет курсы валют с временной меткой
+        Сохраняем курсы валют с временной меткой
         """
-        data = self._load_data()
+        # Загружаем исторические данные через общую базу
+        historical_data = self.db.load_exchange_rates()
         
+        # Добавляем новую запись
         timestamp = datetime.now(timezone.utc).isoformat()
-        data[timestamp] = rates
+        historical_data[timestamp] = rates
         
-        self._save_data(data)
-    
-    def _load_data(self) -> Dict[str, Any]:
-        """Загружает данные из файла"""
-        if not self.data_file.exists():
-            return {}
-        
-        with open(self.data_file, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    
-    def _save_data(self, data: Dict[str, Any]):
-        """Сохраняет данные в файл"""
-        with open(self.data_file, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
+        # Сохраняем через общую базу
+        self.db.save_exchange_rates(historical_data)
     
     def get_latest_rates(self) -> Dict[str, Any]:
-        """Возвращает последние сохраненные курсы"""
-        data = self._load_data()
-        if not data:
+        """Возвращаем последние сохраненные курсы"""
+        historical_data = self.db.load_exchange_rates()
+        
+        if not historical_data:
             return {}
         
-        latest_timestamp = sorted(data.keys())[-1]
-        return data[latest_timestamp]
+        # Находим последнюю временную метку
+        timestamps = [ts for ts in historical_data.keys() 
+                     if ts not in ["rates", "last_update"]]  # Игнорируем служебные поля ненужные
+        
+        if not timestamps:
+            return {}
+        
+        latest_timestamp = sorted(timestamps)[-1]
+        return historical_data[latest_timestamp]
 
 
 

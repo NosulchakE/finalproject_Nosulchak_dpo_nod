@@ -1,69 +1,55 @@
+# valutatrade_hub/decorators.py
 import functools
-from typing import Callable
-from valutatrade_hub.logging_config import logger
-from valutatrade_hub.core.usecases import get_current_user
+from datetime import datetime
+import logging
 
+logger = logging.getLogger(__name__)
 
-def log_action(action: str, verbose: bool = True):
-    """
-    Декоратор для логирования действий (buy/sell/register/login).
-    
-    :param action: Название действия (BUY, SELL, REGISTER, LOGIN)
-    :param verbose: Включает контекст результата (например, "было->стало")
-    """
-    def decorator(func: Callable):
+def log_action(action: str, verbose: bool = False):
+    def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            user = None
+            timestamp = datetime.now().isoformat()
+            
             try:
-                try:
-                    user = get_current_user()
-                    username = user.username
-                    user_id = user.user_id
-                except Exception:
-                    username = kwargs.get("username", "N/A")
-                    user_id = "N/A"
-
-                result = "OK"
-                value_before = kwargs.get("value_before", None)
-
-                res = func(*args, **kwargs)
-
-                value_after = res if verbose else None
-
-                log_parts = [
-                    f"action={action}",
-                    f"user='{username}'",
-                ]
-
-                if "currency_code" in kwargs:
-                    log_parts.append(f"currency='{kwargs['currency_code']}'")
-                if "amount" in kwargs:
-                    log_parts.append(f"amount={kwargs['amount']}")
-                if "rate" in kwargs:
-                    log_parts.append(f"rate={kwargs['rate']}")
-                if "base" in kwargs:
-                    log_parts.append(f"base='{kwargs['base']}'")
-
-                log_parts.append(f"result={result}")
-                if verbose and value_before is not None and value_after is not None:
-                    log_parts.append(f"context='{value_before}→{value_after}'")
-
-                logger.info(" ".join(log_parts))
-                return res
-
+                # Берем данные из аргументов
+                username = "unknown"
+                user_id = "unknown"
+                currency_code = ""
+                amount = ""
+                
+                if args:
+                    # для buy/sell: (user_id, currency, amount)
+                    if action in ("BUY", "SELL") and len(args) >= 3:
+                        user_id = args[0]
+                        currency_code = args[1]
+                        amount = args[2]
+                    # Для register/login: (username, password)
+                    elif action in ("REGISTER", "LOGIN") and len(args) >= 1:
+                        username = args[0]
+                
+                # Выполняем функцию
+                result = func(*args, **kwargs)
+                
+                # Логируем успех
+                log_msg = f"timestamp={timestamp} action={action} username='{username}' user_id={user_id}"
+                if currency_code:
+                    log_msg += f" currency_code='{currency_code}'"
+                if amount:
+                    log_msg += f" amount={amount}"
+                log_msg += " result=OK"
+                
+                logger.info(log_msg)
+                return result
+                
             except Exception as e:
-                error_type = type(e).__name__
-                error_message = str(e)
-                log_parts = [
-                    f"action={action}",
-                    f"user='{username}'",
-                    "result=ERROR",
-                    f"error_type={error_type}",
-                    f"error_message='{error_message}'"
-                ]
-                logger.info(" ".join(log_parts))
-                raise  # проброс исключения дальше
-
+                # Логируем ошибку
+                error_msg = f"timestamp={timestamp} action={action} username='{username}' user_id={user_id} result=ERROR error_type={type(e).__name__} error_message='{str(e)}'"
+                logger.info(error_msg)
+                raise
+        
         return wrapper
     return decorator
+
+
+
