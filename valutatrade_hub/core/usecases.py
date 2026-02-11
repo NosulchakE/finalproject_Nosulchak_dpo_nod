@@ -51,13 +51,8 @@ def login_user(username: str, password: str) -> dict:
     if not user:
         raise ValueError("Неверный логин или пароль")
 
-    user_obj = User(
-        user_id=user["user_id"],
-        username=user["username"],
-        hashed_password=user["hashed_password"],
-        salt=user["salt"]
-    )
-    if user_obj._hashed_password != user["hashed_password"] or user_obj._salt != user["salt"]:
+    user_obj = User.from_dict(user)
+    if not user_obj.verify_password(password):
         raise ValueError("Неверный логин или пароль")
 
     logger.info(f"Пользователь '{username}' успешно вошел")
@@ -176,6 +171,7 @@ def get_rate(from_currency: str, to_currency: str):
 def update_rates(source=None):
     updater = RatesUpdater(source=source)
     return updater.run_update()
+
 
 
 
