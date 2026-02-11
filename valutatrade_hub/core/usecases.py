@@ -1,53 +1,20 @@
 # valutatrade_hub/core/usecases.py
 
-import os
-import json
 import logging
 from valutatrade_hub.core.models import User
 from valutatrade_hub.core.exceptions import InsufficientFundsError, CurrencyNotFoundError, ApiRequestError
 from valutatrade_hub.parser_service.updater import RatesUpdater
+from valutatrade_hub.infra.database import JSONDatabase
 
-# Настройка логирования для Core
-logger = logging.getLogger("valutatrade_hub.core.usecases")
-logger.setLevel(logging.INFO)
-logger.propagate = False
+# Убираем локальную настройку логирования, используем централизованную
+logger = logging.getLogger(__name__)
 
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
-formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
-console_handler.setFormatter(formatter)
-logger.addHandler(console_handler)
-
-
-USERS_FILE = "data/users.json"
-PORTFOLIOS_FILE = "data/portfolios.json"
-RATES_FILE = "data/rates.json" 
-
-
-# Общие функции для JSON
-def _load_json(file_path):
-    if not os.path.exists(file_path):
-        return {"pairs": {}, "last_refresh": None} if file_path.endswith("rates.json") else []
-    with open(file_path, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def _save_json(file_path, data):
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
-    with open(file_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-
-def load_users():
-    return _load_json(USERS_FILE)
-
-
-def save_users(users):
-    _save_json(USERS_FILE, users)
+# Используем базу данных вместо прямых вызовов
+_db = JSONDatabase()
 
 
 def register_user(username: str, password: str) -> dict:
-    users = load_users()
+    users = _db.load_users()
     if any(u["username"] == username for u in users):
         raise ValueError("Пользователь с таким именем уже существует")
 
@@ -59,33 +26,32 @@ def register_user(username: str, password: str) -> dict:
         "user_id": user_id,
         "username": username,
         "salt": user_obj._salt,
-        "password_hash": user_obj._hashed_password
+        "hashed_password": user_obj._hashed_password
     }
 
     users.append(user)
-    save_users(users)
+    _db.save_users(users)
 
     # Создаем портфель с начальным балансом
-    portfolios = _load_json(PORTFOLIOS_FILE)
+    portfolios = _db.load_portfolios()
     portfolios.append({
         "user_id": user_id,
         "wallets": [{"currency": "USD", "balance": 10000.0}]
     })
-    _save_json(PORTFOLIOS_FILE, portfolios)
+    _db.save_portfolios(portfolios)
 
     logger.info(f"Пользователь '{username}' зарегистрирован с user_id={user_id}")
     return user
 
 
-
 def login_user(username: str, password: str) -> dict:
-    users = load_users()
+    users = _db.load_users()
     user = next((u for u in users if u["username"] == username), None)
     if not user:
         raise ValueError("Неверный логин или пароль")
 
     user_obj = User(user["user_id"], username, password)
-    if user_obj._hashed_password != user["password_hash"] or user_obj._salt != user["salt"]:
+    if user_obj._hashed_password != user["hashed_password"] or user_obj._salt != user["salt"]:
         raise ValueError("Неверный логин или пароль")
 
     logger.info(f"Пользователь '{username}' успешно вошел")
@@ -94,7 +60,7 @@ def login_user(username: str, password: str) -> dict:
 
 # Портфель
 def show_portfolio(user_id: int, base_currency="USD"):
-    portfolios = _load_json(PORTFOLIOS_FILE)
+    portfolios = _db.load_portfolios()
     portfolio = next((p for p in portfolios if p["user_id"] == user_id), None)
     if not portfolio:
         logger.warning("Портфель пуст")
@@ -125,7 +91,7 @@ def buy_currency(user_id: int, currency: str, amount: float):
     if amount <= 0:
         raise ValueError("Сумма должна быть положительной")
 
-    portfolios = _load_json(PORTFOLIOS_FILE)
+    portfolios = _db.load_portfolios()
     portfolio = next((p for p in portfolios if p["user_id"] == user_id), None)
     if portfolio is None:
         portfolio = {"user_id": user_id, "wallets": []}
@@ -152,15 +118,17 @@ def buy_currency(user_id: int, currency: str, amount: float):
     usd_wallet["balance"] -= cost_usd
     target_wallet["balance"] += amount
 
-    _save_json(PORTFOLIOS_FILE, portfolios)
+    _db.save_portfolios(portfolios)
     logger.info(f"Куплено {amount:.2f} {currency} за {cost_usd:.2f} USD (курс: 1 USD = {rate:.4f} {currency})")
+
+
 
 
 def sell_currency(user_id: int, currency: str, amount: float):
     if amount <= 0:
         raise ValueError("Сумма должна быть положительной")
 
-    portfolios = _load_json(PORTFOLIOS_FILE)
+    portfolios = _db.load_portfolios()
     portfolio = next((p for p in portfolios if p["user_id"] == user_id), None)
     if not portfolio:
         raise InsufficientFundsError("Портфель не найден")
@@ -183,20 +151,18 @@ def sell_currency(user_id: int, currency: str, amount: float):
     source_wallet["balance"] -= amount
     usd_wallet["balance"] += revenue_usd
 
-    _save_json(PORTFOLIOS_FILE, portfolios)
+    _db.save_portfolios(portfolios)
     logger.info(f"Продано {amount:.2f} {currency} за {revenue_usd:.2f} USD (курс: 1 {currency} = {rate:.4f} USD)")
 
 
 # Курсы
 def get_rate(from_currency: str, to_currency: str):
-    data = _load_json(RATES_FILE)
+    data = _db.load_rates()
     pair_key = f"{from_currency.upper()}_{to_currency.upper()}"
     pair = data.get("pairs", {}).get(pair_key)
     if not pair:
         raise CurrencyNotFoundError(f"Курс для {pair_key} не найден")
     return pair["rate"], pair["updated_at"]
-
-
 
 
 def update_rates(source=None):
@@ -208,7 +174,6 @@ def get_current_user():
     """Для совместимости с декораторами"""
     from valutatrade_hub.cli.interface import CURRENT_USER
     return CURRENT_USER
-
 
 
 
