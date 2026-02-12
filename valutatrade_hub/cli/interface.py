@@ -26,6 +26,7 @@ def run_interactive_cli():
         logger.info("  4. buy              - Купить валюту")
         logger.info("  5. sell             - Продать валюту")
         logger.info("  6. update_rates     - Обновить курсы")
+        logger.info("  7. show_rates       - Показать курсы валют")  
         logger.info("  0. exit             - Выход")
 
         command = input("\nВведите команду: ").strip().lower()
@@ -140,6 +141,7 @@ def show_rates_command():
     top = int(top_str) if top_str else None
     
     usecases.show_rates(currency=currency, top=top)
+
 
 
 
