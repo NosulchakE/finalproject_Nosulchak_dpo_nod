@@ -146,11 +146,15 @@ def sell_currency(user_id: int, currency: str, amount: float):
     portfolios = _db.load_portfolios()
     portfolio = next((p for p in portfolios if p["user_id"] == user_id), None)
     if not portfolio:
-        raise InsufficientFundsError("Портфель не найден")
+        raise ValueError("Портфель не найден")
 
     source_wallet = next((w for w in portfolio["wallets"] if w["currency"] == currency), None)
     if not source_wallet or source_wallet["balance"] < amount:
-        raise InsufficientFundsError(f"Недостаточно {currency} для продажи")
+        raise InsufficientFundsError(
+            available=source_wallet["balance"],
+            required=amount,
+            code=currency
+        )
 
     usd_wallet = next((w for w in portfolio["wallets"] if w["currency"] == "USD"), None)
     if not usd_wallet:
@@ -186,6 +190,7 @@ def get_rate(from_currency: str, to_currency: str):
 def update_rates(source=None):
     updater = RatesUpdater(source=source)
     return updater.run_update()
+
 
 
 
