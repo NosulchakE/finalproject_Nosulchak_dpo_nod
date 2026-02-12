@@ -1,20 +1,37 @@
 # valutatrade_hub/parser_service/api_clients.py
-import requests
+from abc import ABC, abstractmethod
 from typing import Dict
+import requests
 import logging
 from .config import ParserConfig
-from valutatrade_hub.core.exceptions import ApiRequestError
 
 logger = logging.getLogger(__name__)
 
 
-class ExchangeRateAPI:
-    """Клиент для ExchangeRate-API (только фиат)"""
+class BaseApiClient(ABC):
+    """Базовый абстрактный класс для API клиентов"""
     
     def __init__(self):
         self.config = ParserConfig()
-        self.base_url = f"{self.config.EXCHANGERATE_API_URL}/{self.config.EXCHANGERATE_API_KEY}/latest/{self.config.BASE_CURRENCY}"
         self.timeout = self.config.REQUEST_TIMEOUT
+    
+    @abstractmethod
+    def get_rates(self) -> Dict[str, float]:
+        """Получить курсы валют"""
+        pass
+    
+    @abstractmethod
+    def _get_mock_rates(self) -> Dict[str, float]:
+        """Тестовые данные на случай ошибки"""
+        pass
+
+
+class ExchangeRateAPI(BaseApiClient):
+    """Клиент для ExchangeRate-API (только фиат)"""
+    
+    def __init__(self):
+        super().__init__()  # вызвать родительский __init__
+        self.base_url = f"{self.config.EXCHANGERATE_API_URL}/{self.config.EXCHANGERATE_API_KEY}/latest/{self.config.BASE_CURRENCY}"
     
     def get_rates(self) -> Dict[str, float]:
         try:
@@ -52,12 +69,11 @@ class ExchangeRateAPI:
         return {"EUR": 0.92, "GBP": 0.79, "RUB": 92.5}
 
 
-class CoinGeckoAPI:
+class CoinGeckoAPI(BaseApiClient):
     """Клиент для CoinGecko API (криптовалюты)"""
     
     def __init__(self):
-        self.config = ParserConfig()
-        self.timeout = self.config.REQUEST_TIMEOUT
+        super().__init__()  # вызвать родительский __init__
     
     def get_rates(self) -> Dict[str, float]:
         try:
@@ -87,6 +103,7 @@ class CoinGeckoAPI:
     
     def _get_mock_rates(self) -> Dict[str, float]:
         return {"BTC": 59337.21, "ETH": 3720.00, "SOL": 145.12}
+
 
 
 
