@@ -8,6 +8,7 @@ __pycache__/
 env/
 venv/
 .env/
+.env
 
 # Build artifacts
 build/
@@ -31,5 +32,6 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.bak
+
 
 
