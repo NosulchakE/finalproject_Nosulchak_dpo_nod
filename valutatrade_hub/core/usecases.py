@@ -119,7 +119,11 @@ def buy_currency(user_id: int, currency: str, amount: float):
 
     usd_wallet = next((w for w in portfolio["wallets"] if w["currency"] == "USD"), None)
     if not usd_wallet:
-        raise InsufficientFundsError("Нет USD для покупки")
+        raise InsufficientFundsError(
+            available=0,
+            required=cost_usd,
+            code="USD"
+        )
 
     try:
         rate, _ = get_rate("USD", currency)
@@ -128,7 +132,11 @@ def buy_currency(user_id: int, currency: str, amount: float):
         raise CurrencyNotFoundError(f"Не удалось получить курс для {currency}: {e}")
 
     if usd_wallet["balance"] < cost_usd:
-        raise InsufficientFundsError(f"Недостаточно USD. Нужно: {cost_usd:.2f}, доступно: {usd_wallet['balance']:.2f}")
+        raise InsufficientFundsError(
+            available=usd_wallet["balance"],
+            required=cost_usd,
+            code="USD"
+        )
 
     usd_wallet["balance"] -= cost_usd
     target_wallet["balance"] += amount
@@ -190,6 +198,7 @@ def get_rate(from_currency: str, to_currency: str):
 def update_rates(source=None):
     updater = RatesUpdater(source=source)
     return updater.run_update()
+
 
 
 
