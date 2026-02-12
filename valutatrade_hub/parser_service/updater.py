@@ -4,7 +4,6 @@ from datetime import datetime, timezone
 from typing import Dict, Any
 import logging
 
-from .api_clients import ExchangeRateAPI
 from .storage import RatesStorage
 from .config import ParserConfig
 from valutatrade_hub.core.exceptions import ApiRequestError
@@ -30,6 +29,7 @@ class RatesUpdater:
         
             fiat_rates = self.fiat_api.get_rates()
             crypto_rates = self.crypto_api.get_rates()
+            logger.info(f"Курсы крипты: {crypto_rates}")  # Временно!!!! тестим ошибку курса
         
             all_rates = {**fiat_rates, **crypto_rates}
         
@@ -99,6 +99,7 @@ class RatesUpdater:
             logger.debug("исторические данные успешно сохранены")
         except Exception as e:
             logger.warning(f"Не удалось сохранить исторические данные: {e}")
+
 
 
 
