@@ -1,4 +1,6 @@
 # valutatrade_hub/core/usecases.py
+from valutatrade_hub.parser_service.config import ParserConfig
+from datetime import datetime, timezone
 from valutatrade_hub.decorators import log_action
 import logging
 from valutatrade_hub.core.models import User
@@ -189,19 +191,30 @@ def sell_currency(user_id: int, currency: str, amount: float):
 # Курсы
 def get_rate(from_currency: str, to_currency: str):
     if from_currency.upper() == to_currency.upper():
-        return 1.0, datetime.now().isoformat()  # курс сам к себе= 1
+        return 1.0, datetime.now().isoformat()
     
     data = _db.load_rates()
     pair_key = f"{from_currency.upper()}_{to_currency.upper()}"
     pair = data.get("pairs", {}).get(pair_key)
+    
     if not pair:
         raise CurrencyNotFoundError(f"Курс для {pair_key} не найден")
+    
+    # проверка на устаревшие данные
+    updated_at = datetime.fromisoformat(pair["updated_at"].replace('Z', '+00:00'))
+    now = datetime.now(timezone.utc)
+    age = (now - updated_at).total_seconds()
+    
+    if age > ParserConfig.CACHE_TTL:
+        raise CurrencyNotFoundError(f"Курс для {pair_key} устарел, обновите данные")
+    
     return pair["rate"], pair["updated_at"]
 
 
 def update_rates(source=None):
     updater = RatesUpdater(source=source)
     return updater.run_update()
+
 
 
 
