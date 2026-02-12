@@ -39,6 +39,10 @@ class ParserConfig:
     # Для возможной кастомизации
     CUSTOM_CRYPTO_MAP: Dict[str, str] = field(default_factory=dict)
 
+    # срок годности кэша в секундах (5 минут)
+    CACHE_TTL: int = 300
+
+
 
 
 
