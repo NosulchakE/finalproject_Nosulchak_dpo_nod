@@ -2,6 +2,9 @@
 import os
 from dataclasses import dataclass, field
 from typing import Dict, Tuple
+from dotenv import load_dotenv  
+
+load_dotenv()  # загружает .env файл
 
 @dataclass
 class ParserConfig:
@@ -25,6 +28,7 @@ class ParserConfig:
     
     # Для возможной кастомизации
     CUSTOM_CRYPTO_MAP: Dict[str, str] = field(default_factory=dict)
+
 
 
 
