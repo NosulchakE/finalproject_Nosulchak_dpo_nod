@@ -2,64 +2,64 @@
   "pairs": {
     "USD_EUR": {
       "rate": 0.1,
-      "updated_at": "2026-02-10T13:48:32.922462+00:00",
+      "updated_at": "2026-02-12T07:05:40.497580+00:00",
       "source": "exchangerate-api"
     },
     "EUR_USD": {
       "rate": 10.0,
-      "updated_at": "2026-02-10T13:48:32.922462+00:00",
+      "updated_at": "2026-02-12T07:05:40.497580+00:00",
       "source": "exchangerate-api"
     },
     "USD_GBP": {
       "rate": 0.2,
-      "updated_at": "2026-02-10T13:48:32.922462+00:00",
+      "updated_at": "2026-02-12T07:05:40.497580+00:00",
       "source": "exchangerate-api"
     },
     "GBP_USD": {
       "rate": 5.0,
-      "updated_at": "2026-02-10T13:48:32.922462+00:00",
+      "updated_at": "2026-02-12T07:05:40.497580+00:00",
       "source": "exchangerate-api"
     },
     "USD_RUB": {
       "rate": 0.30000000000000004,
-      "updated_at": "2026-02-10T13:48:32.922462+00:00",
+      "updated_at": "2026-02-12T07:05:40.497580+00:00",
       "source": "exchangerate-api"
     },
     "RUB_USD": {
       "rate": 3.333333333333333,
-      "updated_at": "2026-02-10T13:48:32.922462+00:00",
+      "updated_at": "2026-02-12T07:05:40.497580+00:00",
       "source": "exchangerate-api"
     },
     "USD_BTC": {
       "rate": 0.4,
-      "updated_at": "2026-02-10T13:48:32.922462+00:00",
+      "updated_at": "2026-02-12T07:05:40.497580+00:00",
       "source": "exchangerate-api"
     },
     "BTC_USD": {
       "rate": 2.5,
-      "updated_at": "2026-02-10T13:48:32.922462+00:00",
+      "updated_at": "2026-02-12T07:05:40.497580+00:00",
       "source": "exchangerate-api"
     },
     "USD_ETH": {
       "rate": 0.5,
-      "updated_at": "2026-02-10T13:48:32.922462+00:00",
+      "updated_at": "2026-02-12T07:05:40.497580+00:00",
       "source": "exchangerate-api"
     },
     "ETH_USD": {
       "rate": 2.0,
-      "updated_at": "2026-02-10T13:48:32.922462+00:00",
+      "updated_at": "2026-02-12T07:05:40.497580+00:00",
       "source": "exchangerate-api"
     },
     "USD_SOL": {
       "rate": 0.6000000000000001,
-      "updated_at": "2026-02-10T13:48:32.922462+00:00",
+      "updated_at": "2026-02-12T07:05:40.497580+00:00",
       "source": "exchangerate-api"
     },
     "SOL_USD": {
       "rate": 1.6666666666666665,
-      "updated_at": "2026-02-10T13:48:32.922462+00:00",
+      "updated_at": "2026-02-12T07:05:40.497580+00:00",
       "source": "exchangerate-api"
     }
   },
-  "last_refresh": "2026-02-10T13:48:32.922462+00:00"
+  "last_refresh": "2026-02-12T07:05:40.497580+00:00"
 }

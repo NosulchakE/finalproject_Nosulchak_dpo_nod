@@ -19,5 +19,11 @@
     "password_hash": "79fe973d7e16a7b29c8b1cc8c470df3b84738164f56ca1e41c1d6133b110869b",
     "salt": "caf20a54d4c2b005",
     "registration_date": "2026-02-10T16:28:00.320200"
+  },
+  {
+    "user_id": 4,
+    "username": "tester",
+    "salt": "18b9ba4b7682b741",
+    "hashed_password": "94049255d0ca72b52e98fe0f6aa2b5289e7865b45507eb4f778f3a7258feeb27"
   }
 ]
