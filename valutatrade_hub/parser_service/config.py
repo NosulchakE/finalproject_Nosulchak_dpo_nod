@@ -14,12 +14,22 @@ class ParserConfig:
     # Эндпоинт ExchangeRate-API
     EXCHANGERATE_API_URL: str = "https://v6.exchangerate-api.com/v6"
     
+    # Эндпоинт CoinGecko API
+    COINGECKO_API_URL: str = "https://api.coingecko.com/api/v3/simple/price"
+    
     # Списки валют
     BASE_CURRENCY: str = "USD"
     FIAT_CURRENCIES: Tuple[str, ...] = ("EUR", "GBP", "RUB")
     CRYPTO_CURRENCIES: Tuple[str, ...] = ("BTC", "ETH", "SOL")
     
-    # Пути  оставляем относительные пути)
+    # Маппинг тикеров на ID в CoinGecko
+    CRYPTO_ID_MAP: Dict[str, str] = field(default_factory=lambda: {
+        "BTC": "bitcoin",
+        "ETH": "ethereum",
+        "SOL": "solana"
+    })
+    
+    # Пути (оставляем относительные пути)
     RATES_FILE_PATH: str = field(default_factory=lambda: "data/rates.json")
     HISTORY_FILE_PATH: str = field(default_factory=lambda: "data/exchange_rates.json")
     
