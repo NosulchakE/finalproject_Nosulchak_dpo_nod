@@ -30,15 +30,15 @@
     "wallets": [
       {
         "currency": "USD",
-        "balance": 10237.5
+        "balance": 9049.398029434977
       },
       {
         "currency": "EUR",
-        "balance": 0.0
+        "balance": 1000.0
       },
       {
         "currency": "BTC",
-        "balance": 5.0
+        "balance": 2035.0
       }
     ]
   }
