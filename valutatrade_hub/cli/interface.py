@@ -13,6 +13,7 @@ CURRENT_USER = None
 
 def run_interactive_cli():
     logger.info("Добро пожаловать в ValutaTrade Hub!")
+    logger.info("  7. show_rates      - Показать курсы валют")
     
     # Локальная переменная 
     current_user = None
@@ -44,6 +45,8 @@ def run_interactive_cli():
                 _sell_currency(current_user)
             elif command in ("6", "update_rates"):
                 _update_rates()
+            elif command in ("7", "show_rates"):
+                show_rates_command()
             elif command in ("0", "exit"):
                 logger.info("Выход из программы...")
                 break
@@ -120,13 +123,24 @@ def _sell_currency(current_user):
     except Exception as e:
         logger.error(f"Не удалось продать валюту: {e}")
 
-
+# обновление курсов
 def _update_rates():
     try:
         updated_count = usecases.update_rates()
         logger.info(f"Обновлено {updated_count} курсов валют")
     except Exception as e:
         logger.error(f"Ошибка при обновлении курсов: {e}")
+# показать рейтинг курсов
+def show_rates_command():
+    """Показать курсы валют"""
+    currency = input("Валюта (Enter - все): ").strip().upper()
+    currency = currency if currency else None
+    
+    top_str = input("Топ N криптовалют (Enter - пропустить): ").strip()
+    top = int(top_str) if top_str else None
+    
+    usecases.show_rates(currency=currency, top=top)
+
 
 
 
