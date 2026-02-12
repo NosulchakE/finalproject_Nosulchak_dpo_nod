@@ -91,6 +91,8 @@ def show_portfolio(user_id: int, base_currency="USD"):
 
 @log_action("BUY")
 def buy_currency(user_id: int, currency: str, amount: float):
+    if not isinstance(amount, (int, float)):
+        raise ValueError("Сумма должна быть числом")
     if amount <= 0:
         raise ValueError("Сумма должна быть положительной")
 
@@ -148,6 +150,8 @@ def buy_currency(user_id: int, currency: str, amount: float):
 
 @log_action("SELL")
 def sell_currency(user_id: int, currency: str, amount: float):
+    if not isinstance(amount, (int, float)):
+        raise ValueError("Сумма должна быть числом")
     if amount <= 0:
         raise ValueError("Сумма должна быть положительной")
 
@@ -198,6 +202,7 @@ def get_rate(from_currency: str, to_currency: str):
 def update_rates(source=None):
     updater = RatesUpdater(source=source)
     return updater.run_update()
+
 
 
 
