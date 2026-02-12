@@ -215,6 +215,47 @@ def update_rates(source=None):
     updater = RatesUpdater(source=source)
     return updater.run_update()
 
+# список актуальных курсов из локального кеша 
+def show_rates(currency: str = None, top: int = None, base: str = "USD"):
+    """
+    Показать курсы из кэша с фильтрацией.
+    """
+    data = _db.load_rates()
+    
+    if not data.get("pairs"):
+        logger.warning("Локальный кеш курсов пуст. Выполните 'update_rates' для загрузки данных.")
+        return
+    
+    last_refresh = data.get("last_refresh", "неизвестно")
+    print(f"\nRates from cache (updated at {last_refresh}):")
+    
+    pairs = data["pairs"]
+    
+    # фильтр по валюте
+    if currency:
+        pair_key = f"{currency.upper()}_{base.upper()}"
+        pair = pairs.get(pair_key)
+        if pair:
+            print(f"- {pair_key}: {pair['rate']} ({pair['source']})")
+        else:
+            print(f"Курс для '{currency}' не найден в кеше.")
+        return
+    
+    # топ N криптовалют
+    if top:
+        crypto_pairs = []
+        for key, value in pairs.items():
+            if key.startswith(("BTC_", "ETH_", "SOL_")):
+                crypto_pairs.append((key, value["rate"]))
+        
+        crypto_pairs.sort(key=lambda x: x[1], reverse=True)
+        for key, rate in crypto_pairs[:top]:
+            print(f"- {key}: {rate}")
+        return
+    
+    # все курсы
+    for key, value in sorted(pairs.items()):
+        print(f"- {key}: {value['rate']} ({value['source']})")
 
 
 
