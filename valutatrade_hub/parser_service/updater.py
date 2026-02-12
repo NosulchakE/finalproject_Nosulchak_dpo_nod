@@ -17,34 +17,33 @@ class RatesUpdater:
 
     def __init__(self, source: str = None):
         self.config = ParserConfig()
-        self.source = source or "exchangerate-api"
-        self.api_client = ExchangeRateAPI()
+        self.source = source or "combined"
+        self.fiat_api = ExchangeRateAPI()
+        self.crypto_api = CoinGeckoAPI()
         self.storage = RatesStorage()
-        self.db = JSONDatabase()  # ДОБАВЛЯЕМ БАЗУ ДАННЫХ
+        self.db = JSONDatabase()
 
     def run_update(self) -> int:
-        """Основной метод обновления курсов"""
         try:
-            logger.info(f"Обновление курсов валют из {self.source}...")
-
-            # Получаем свежие курсы от API
-            fresh_rates = self.api_client.get_rates()
-
-            if not fresh_rates:
-                logger.warning("Не получены данные от API. Используются тестовые данные")
+            logger.info("Обновление курсов валют...")
+        
+            fiat_rates = self.fiat_api.get_rates()
+            crypto_rates = self.crypto_api.get_rates()
+        
+            all_rates = {**fiat_rates, **crypto_rates}
+        
+            if not all_rates:
+                logger.warning("Нет данных от API")
                 return 0
-
-            # Обновляем  rates.json
-            updated_count = self._update_rates_cache(fresh_rates)
-
-            # Сохраняем исторические данные 
-            self._save_historical_data(fresh_rates)
-
-            logger.info(f"Обновлено {updated_count} курсов валют")
+        
+            updated_count = self._update_rates_cache(all_rates)
+            self._save_historical_data(all_rates)
+        
+            logger.info(f"Обновлено {updated_count} курсов")
             return updated_count
-
+        
         except Exception as e:
-            logger.error(f"Ошибка при обновлении курсов: {e}")
+            logger.error(f"Ошибка обновления: {e}")
             raise ApiRequestError(f"Ошибка API: {e}")
 
     def _update_rates_cache(self, fresh_rates: Dict[str, Any]) -> int:
@@ -99,6 +98,7 @@ class RatesUpdater:
             logger.debug("исторические данные успешно сохранены")
         except Exception as e:
             logger.warning(f"Не удалось сохранить исторические данные: {e}")
+
 
 
 
