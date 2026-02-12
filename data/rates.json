@@ -1,65 +1,65 @@
 {
   "pairs": {
     "USD_EUR": {
-      "rate": 0.1,
-      "updated_at": "2026-02-12T07:05:40.497580+00:00",
-      "source": "exchangerate-api"
+      "rate": 0.8417,
+      "updated_at": "2026-02-12T08:09:00.043949+00:00",
+      "source": "combined"
     },
     "EUR_USD": {
-      "rate": 10.0,
-      "updated_at": "2026-02-12T07:05:40.497580+00:00",
-      "source": "exchangerate-api"
+      "rate": 1.1880717595342758,
+      "updated_at": "2026-02-12T08:09:00.043949+00:00",
+      "source": "combined"
     },
     "USD_GBP": {
-      "rate": 0.2,
-      "updated_at": "2026-02-12T07:05:40.497580+00:00",
-      "source": "exchangerate-api"
+      "rate": 0.733,
+      "updated_at": "2026-02-12T08:09:00.043949+00:00",
+      "source": "combined"
     },
     "GBP_USD": {
-      "rate": 5.0,
-      "updated_at": "2026-02-12T07:05:40.497580+00:00",
-      "source": "exchangerate-api"
+      "rate": 1.364256480218281,
+      "updated_at": "2026-02-12T08:09:00.043949+00:00",
+      "source": "combined"
     },
     "USD_RUB": {
-      "rate": 0.30000000000000004,
-      "updated_at": "2026-02-12T07:05:40.497580+00:00",
-      "source": "exchangerate-api"
+      "rate": 77.2045,
+      "updated_at": "2026-02-12T08:09:00.043949+00:00",
+      "source": "combined"
     },
     "RUB_USD": {
-      "rate": 3.333333333333333,
-      "updated_at": "2026-02-12T07:05:40.497580+00:00",
-      "source": "exchangerate-api"
+      "rate": 0.012952612865830361,
+      "updated_at": "2026-02-12T08:09:00.043949+00:00",
+      "source": "combined"
     },
     "USD_BTC": {
-      "rate": 0.4,
-      "updated_at": "2026-02-12T07:05:40.497580+00:00",
-      "source": "exchangerate-api"
+      "rate": 67192,
+      "updated_at": "2026-02-12T08:09:00.043949+00:00",
+      "source": "combined"
     },
     "BTC_USD": {
-      "rate": 2.5,
-      "updated_at": "2026-02-12T07:05:40.497580+00:00",
-      "source": "exchangerate-api"
+      "rate": 1.4882724133825456e-05,
+      "updated_at": "2026-02-12T08:09:00.043949+00:00",
+      "source": "combined"
     },
     "USD_ETH": {
-      "rate": 0.5,
-      "updated_at": "2026-02-12T07:05:40.497580+00:00",
-      "source": "exchangerate-api"
+      "rate": 1969.83,
+      "updated_at": "2026-02-12T08:09:00.043949+00:00",
+      "source": "combined"
     },
     "ETH_USD": {
-      "rate": 2.0,
-      "updated_at": "2026-02-12T07:05:40.497580+00:00",
-      "source": "exchangerate-api"
+      "rate": 0.0005076580212505648,
+      "updated_at": "2026-02-12T08:09:00.043949+00:00",
+      "source": "combined"
     },
     "USD_SOL": {
-      "rate": 0.6000000000000001,
-      "updated_at": "2026-02-12T07:05:40.497580+00:00",
-      "source": "exchangerate-api"
+      "rate": 80.71,
+      "updated_at": "2026-02-12T08:09:00.043949+00:00",
+      "source": "combined"
     },
     "SOL_USD": {
-      "rate": 1.6666666666666665,
-      "updated_at": "2026-02-12T07:05:40.497580+00:00",
-      "source": "exchangerate-api"
+      "rate": 0.01239003840911907,
+      "updated_at": "2026-02-12T08:09:00.043949+00:00",
+      "source": "combined"
     }
   },
-  "last_refresh": "2026-02-12T07:05:40.497580+00:00"
+  "last_refresh": "2026-02-12T08:09:00.043949+00:00"
 }
