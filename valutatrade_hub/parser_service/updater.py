@@ -1,4 +1,5 @@
 # valutatrade_hub/parser_service/updater.py
+from .api_clients import ExchangeRateAPI, CoinGeckoAPI
 from datetime import datetime, timezone
 from typing import Dict, Any
 import logging
@@ -98,6 +99,7 @@ class RatesUpdater:
             logger.debug("исторические данные успешно сохранены")
         except Exception as e:
             logger.warning(f"Не удалось сохранить исторические данные: {e}")
+
 
 
 
