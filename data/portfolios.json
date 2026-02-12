@@ -30,7 +30,7 @@
     "wallets": [
       {
         "currency": "USD",
-        "balance": 9049.398029434977
+        "balance": 9489.96872064774
       },
       {
         "currency": "EUR",
@@ -39,6 +39,18 @@
       {
         "currency": "BTC",
         "balance": 2035.0
+      },
+      {
+        "currency": "SOL",
+        "balance": 194.0
+      },
+      {
+        "currency": "RUB",
+        "balance": 4000.0
+      },
+      {
+        "currency": "ETH",
+        "balance": 10000.0
       }
     ]
   }
